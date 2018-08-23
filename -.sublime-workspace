@@ -1,0 +1,326 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"ado",
+				"ADODB"
+			],
+			[
+				"As",
+				"asdf"
+			]
+		]
+	},
+	"buffers":
+	[
+		{
+			"contents": "Sub Get_File_Names(GroupName as string , FolderName as string , NameStyle as string , TargetTable as string)\n\n  \tDim FileNames(500) as string , FileNamesCount as integer , ThisFileName as string\n  \tDim ADO_rs as adodb.recordset\n  \tSet ADO_rs = new adodb.recordset\n\n    'Set:ADO_rs source=TargetTable\n\n    'Do:ADO_rs.EOF FileNames()=ADO_rs!FileName\n\n    'Do:ThisFileName=dir(FolderName)\n\n        'Check:RegExp (Thisfilename , NameStyle)\n\n \t\t'For:If:FileNames=Thisfilename ThisFileName=\"\"\n\n      \t'ADO_rs add\n\n      \t'FileName=ThisFileName\n\n      '123156\n    \n\n\nEnd sub\n\n",
+			"file": "GetFileNames.vb",
+			"file_size": 591,
+			"file_write_time": 131794805958125000,
+			"settings":
+			{
+				"buffer_size": 569,
+				"line_ending": "Windows"
+			}
+		}
+	],
+	"build_system": "Packages/VBScript/VBScript.sublime-build",
+	"build_system_choices":
+	[
+		[
+			[
+				[
+					"Packages/VBScript/VBScript.sublime-build",
+					""
+				],
+				[
+					"Packages/VBScript/VBScript.sublime-build",
+					"Run with WScript"
+				],
+				[
+					"Packages/VBScript/VBScript.sublime-build",
+					"Debug with CScript"
+				]
+			],
+			[
+				"Packages/VBScript/VBScript.sublime-build",
+				""
+			]
+		]
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"instal",
+				"Package Control: Install Package"
+			],
+			[
+				"pa",
+				"Package Control: Remove Package"
+			],
+			[
+				"Package Control: ",
+				"Package Control: Remove Package"
+			],
+			[
+				"pack",
+				"Package Control: List Packages"
+			],
+			[
+				"in",
+				"Package Control: Install Package"
+			],
+			[
+				"Snippet: ",
+				"Snippet: For Loop"
+			],
+			[
+				"pac",
+				"Package Control: Remove Package"
+			],
+			[
+				"ins",
+				"Package Control: Install Package"
+			],
+			[
+				"git clone",
+				"git: clone"
+			],
+			[
+				"gits",
+				"GitSavvy: help"
+			],
+			[
+				"git:",
+				"Git: Init"
+			],
+			[
+				"inst",
+				"Package Control: Install Package"
+			],
+			[
+				"package control ",
+				"Package Control: Disable Package"
+			],
+			[
+				"git",
+				"Github: Repository"
+			],
+			[
+				"instal ",
+				"Package Control: Install Package"
+			]
+		],
+		"width": 0.0
+	},
+	"console":
+	{
+		"height": 0.0,
+		"history":
+		[
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"expanded_folders":
+	[
+		"/F/GitHub/-"
+	],
+	"file_history":
+	[
+		"/F/GitHub/-/Name_Link_test.vb",
+		"/F/Excel宏/In_Development/EX_Loader/EX_Loader.vb",
+		"/F/GitHub/-/-.sublime-project",
+		"/C/Documents and Settings/Administrator/Application Data/Sublime Text 3/Packages/SublimeCodeIntel/SublimeCodeIntel.sublime-settings",
+		"/C/Documents and Settings/Administrator/Application Data/Sublime Text 3/Packages/LocalizedMenu/LocalizedMenu.sublime-settings",
+		"/C/Documents and Settings/Administrator/Application Data/Sublime Text 3/Packages/User/SublimeCodeIntel.sublime-settings",
+		"/C/Documents and Settings/Administrator/Application Data/Sublime Text 3/Packages/Package Control/Package Control.sublime-settings",
+		"/C/Documents and Settings/Administrator/Application Data/Sublime Text 3/Packages/User/Package Control.sublime-settings",
+		"/F/GitHub/-/GetFileNames.vb",
+		"/F/GitHub/-/Name_Link_test",
+		"/F/GitHub/-/README.md",
+		"/F/Database/Development/人员类别演算/Hub_人员类别演算_数据提取/Hub_人员类别演算_数据提取 v0.2.vb",
+		"/F/Database/Development/人员类别演算/Hub_人员类别演算_数据提取/Hub_人员类别演算_数据提取 UserForm v0.2.vb",
+		"/C/Documents and Settings/Administrator/Application Data/Sublime Text 3/Packages/User/Preferences.sublime-settings",
+		"/C/Documents and Settings/Administrator/Application Data/Sublime Text 3/Packages/Default/Preferences.sublime-settings"
+	],
+	"find":
+	{
+		"height": 0.0
+	},
+	"find_in_files":
+	{
+		"height": 0.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"selected": 0,
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "GetFileNames.vb",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 569,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								264,
+								264
+							]
+						],
+						"settings":
+						{
+							"git_savvy.repo_path": "F:\\GitHub\\-",
+							"syntax": "Packages/VBScript/VBScript.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 0.0
+	},
+	"input":
+	{
+		"height": 71.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.GitSavvy":
+	{
+		"height": 126.0
+	},
+	"output.exec":
+	{
+		"height": 126.0
+	},
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"output.unsaved_changes":
+	{
+		"height": 138.0
+	},
+	"pinned_build_system": "",
+	"project": "-.sublime-project",
+	"replace":
+	{
+		"height": 0.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_symbol":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": true,
+	"show_open_files": true,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 298.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}
