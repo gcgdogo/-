@@ -23,7 +23,7 @@
 			"file": "GetFileNames.vb",
 			"settings":
 			{
-				"buffer_size": 647,
+				"buffer_size": 656,
 				"encoding": "UTF-8",
 				"line_ending": "Windows"
 			}
@@ -61,6 +61,58 @@
 		"selected_items":
 		[
 			[
+				"git push",
+				"Git: Push"
+			],
+			[
+				"git commit",
+				"Git: Commit"
+			],
+			[
+				"git ad",
+				"Git: Add Current File"
+			],
+			[
+				"Package Control: ",
+				"Package Control: Disable Package"
+			],
+			[
+				"git push to ",
+				"git: push to existing branch"
+			],
+			[
+				"git:push ",
+				"git: push to existing branch"
+			],
+			[
+				"git p",
+				"Git: Push"
+			],
+			[
+				"git:push",
+				"Git: Push"
+			],
+			[
+				"git",
+				"git: diff"
+			],
+			[
+				"git init",
+				"git: init"
+			],
+			[
+				"git sta",
+				"Git: Status"
+			],
+			[
+				"git add",
+				"Git: Add Current File"
+			],
+			[
+				"instal",
+				"Package Control: Install Package"
+			],
+			[
 				"git remo",
 				"git: remote add"
 			],
@@ -81,18 +133,6 @@
 				"Package Control: Disable Package"
 			],
 			[
-				"git",
-				"git: commit"
-			],
-			[
-				"git add",
-				"Git: Add All"
-			],
-			[
-				"git push",
-				"git: push"
-			],
-			[
 				"d",
 				"git: diff"
 			],
@@ -101,15 +141,7 @@
 				"Git: Push"
 			],
 			[
-				"instal",
-				"Package Control: Install Package"
-			],
-			[
 				"pa",
-				"Package Control: Remove Package"
-			],
-			[
-				"Package Control: ",
 				"Package Control: Remove Package"
 			],
 			[
@@ -181,6 +213,9 @@
 	],
 	"file_history":
 	[
+		"/F/GitHub/-/.git/config",
+		"/C/Documents and Settings/Administrator/Application Data/Sublime Text 3/Packages/User/Git.sublime-settings",
+		"/C/Documents and Settings/Administrator/Application Data/Sublime Text 3/Packages/Git/Git.sublime-settings",
 		"/F/GitHub/-/-.sublime-project",
 		"/F/GitHub/-/GetFileNames.vb",
 		"/F/GitHub/-/Name_Link_test.vb",
@@ -200,7 +235,7 @@
 	],
 	"find":
 	{
-		"height": 0.0
+		"height": 27.0
 	},
 	"find_in_files":
 	{
@@ -214,6 +249,7 @@
 		"case_sensitive": false,
 		"find_history":
 		[
+			"/dev/tty"
 		],
 		"highlight": true,
 		"in_selection": false,
@@ -240,22 +276,22 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 647,
+						"buffer_size": 656,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								361,
-								361
+								634,
+								634
 							]
 						],
 						"settings":
 						{
 							"git_savvy.repo_path": "F:\\GitHub\\-",
 							"syntax": "Packages/VBScript/VBScript.tmLanguage",
-							"tab_size": 4,
+							"tab_size": 2,
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
@@ -270,7 +306,7 @@
 	],
 	"incremental_find":
 	{
-		"height": 0.0
+		"height": 27.0
 	},
 	"input":
 	{
@@ -323,7 +359,7 @@
 	"project": "-.sublime-project",
 	"replace":
 	{
-		"height": 0.0
+		"height": 50.0
 	},
 	"save_all_on_build": true,
 	"select_file":
