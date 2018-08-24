@@ -16,11 +16,11 @@ Sub Get_File_Names(GroupName as string , FolderName as string , NameStyle as str
 
  		'For:If:FileNames=Thisfilename ThisFileName=""
 
-      	'ADO_rs add
+      	'ADO_rs add(GroupName,FolderName,ThisFileName)
 
       	'FileName=ThisFileName
 
-        
+    
     
 
 
