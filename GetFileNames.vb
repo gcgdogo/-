@@ -18,8 +18,8 @@ Sub Get_File_Names(GroupName as string , FolderName as string , NameStyle as str
 
       	'FileName=ThisFileName
 
-      '123156
-    
+      '12315678910
+
 
 
 End sub
