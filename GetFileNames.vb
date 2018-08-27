@@ -1,3 +1,7 @@
+'识别目标 ( ID , 添加时间 , 文件组 , 文件夹 , 文件名规则 )
+'识别结果 ( ID , 发现时间 , 文件组 , 文件夹 , 文件名 , 版本号 , 最新版本号 , 最新发现)
+
+
 Function Get_File_Names(Search_Origin as string , TargetTable as string)
     Dim ADO_rs as adodb.recordset
     Set ADO_rs = new adodb.recordset
@@ -5,7 +9,7 @@ Function Get_File_Names(Search_Origin as string , TargetTable as string)
     'Set:ADO_rs source=Search_Origin
 
     'Do:ADO_rs=EOF
-        call Search_Folder(ADO_rs!版本组 , ADO_rs!文件夹 , ADO_rs!文件名规则 , TargetTable)
+        call Search_Folder(ADO_rs!文件组 , ADO_rs!文件夹 , ADO_rs!文件名规则 , TargetTable)
 
 
 End Function
@@ -16,6 +20,7 @@ Private Sub Search_Folder(GroupName as string , FolderName as string , NameStyle
     Dim FileNames(500) as string , FileNamesCount as integer , ThisFileName as string
     Dim ADO_rs as adodb.recordset
     Dim Chk_String as RegExp
+    Dim Time_Search_Started as Variant
     Set ADO_rs = new adodb.recordset
     set Chk_String as new RegExp
 
