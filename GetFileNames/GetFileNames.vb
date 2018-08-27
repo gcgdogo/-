@@ -1,5 +1,5 @@
-'识别目标 ( ID , 添加时间 , 文件组 , 文件夹 , 文件名规则 )
-'识别结果 ( ID , 发现时间 , 文件组 , 文件夹 , 文件名 , 版本号 , 最新版本号 , 最新发现)
+'识别目标 ( ID , 添加时间 , 文件组 , 文件夹 , 文件名规则 , 最新发现时间 , 最新版本号 , 发现时间匹配 , 版本号匹配)
+'识别结果 ( ID , 发现时间 , 文件组 , 文件夹 , 文件名 , 版本号)
 
 
 Function Get_File_Names(Search_Origin as string , TargetTable as string)
@@ -15,14 +15,16 @@ Function Get_File_Names(Search_Origin as string , TargetTable as string)
 End Function
 
 
-Private Sub Search_Folder(GroupName as string , FolderName as string , NameStyle as string , TargetTable as string)
+Private Sub Search_Folder(GroupName as string , FolderName as string , NameStyle as string , TargetTable as string )
 
     Dim FileNames(500) as string , FileNamesCount as integer , ThisFileName as string
     Dim ADO_rs as adodb.recordset
-    Dim Chk_String as RegExp
+    Dim R_Exp as RegExp , R_Matchs as MatchCollection
     Dim Time_Search_Started as Variant
     Set ADO_rs = new adodb.recordset
-    set Chk_String as new RegExp
+    set R_Exp as new RegExp
+
+    Time_Search_Started = Now()
 
     'Set:ADO_rs source=TargetTable
 
@@ -30,12 +32,12 @@ Private Sub Search_Folder(GroupName as string , FolderName as string , NameStyle
 
         'ThisFileName=dir(FolderName)  Do:ThisFileName=dir
 
-        'Chk_String.Test (Thisfilename , NameStyle)
+            'if R_Exp.Test (Thisfilename , NameStyle) then set R_Matchs = R_Exp.Execute
 
-        'For:If:FileNames=Thisfilename ThisFileName=""
+            'For:If:FileNames=Thisfilename ThisFileName=""
 
-        'ADO_rs add(GroupName,FolderName,ThisFileName)
+            'ADO_rs add(GroupName,FolderName,ThisFileName)
 
-        'FileName=ThisFileName
+            'FileName=ThisFileName
 
 End sub
