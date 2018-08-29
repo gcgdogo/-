@@ -89,3 +89,10 @@ Private Sub Search_Folder(GroupName as String , FolderName as String , Str_Expre
 
 
 End sub
+
+        
+        'Need to EDIT:
+        'Sub => function Boolean
+        'RE_P rename
+        
+        
