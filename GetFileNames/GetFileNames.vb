@@ -29,13 +29,12 @@ Private Sub Search_Folder(GroupName as String , FolderName as String , Str_Expre
 
     Dim FileNames(500) as String , FileNamesCount as integer , ThisFileName as String
     Dim ADO_rs as ADODB.Recordset
-    Dim RE_PreEdit as RegExp , RE_GetVer as RegExp , R_Match as Match
+    Dim RE_PreEdit as RegExp , R_Match as Match
 
     Dim Str_Expression_Edited as String
 
     Set ADO_rs = new ADODB.Recordset
     Set RE_PreEdit as new RegExp
-    Set RE_GetVer as new RegExp
 
     'RE_PreEdit初始设置
     RE_PreEdit.IgnoreCase=True
@@ -85,6 +84,8 @@ Private Sub Search_Folder(GroupName as String , FolderName as String , Str_Expre
             'For:If:FileNames=Thisfilename ThisFileName=""
 
             'ADO_rs add(GroupName,FolderName,ThisFileName)
+            
+            'FileNames(+1)=ThisFileName
 
 
 End sub
