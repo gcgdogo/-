@@ -2,11 +2,14 @@
 '识别结果 ( ID , 发现时间 , 文件组 , 文件夹 , 文件名 , 符合规则 , 版本号 , 存在)
 
 
-Function Get_File_Names(Search_Origin_Table as String , TargetTable as String , Time_Search_Started as Variant)
+Function Get_File_Names(Search_Origin_Table as String , TargetTable as String , Time_Search_Started as Variant , Force_VersionChange as Boolean) as Boolean
+    Dim Version_Changed as Boolean
     Dim ADO_rs as ADODB.Recordset
     Set ADO_rs = new ADODB.Recordset
 
     'Set:ADO_rs source=Search_Origin_Table
+
+    Version_Changed=Force_VersionChange
 
     'Do:ADO_rs=EOF
         call Search_Folder(ADO_rs!文件组 , ADO_rs!文件夹 , ADO_rs!文件名规则 , TargetTable)
@@ -14,7 +17,8 @@ Function Get_File_Names(Search_Origin_Table as String , TargetTable as String , 
 
 End Function
 
-Private Sub Search_File_Exist(TargetTable as String)
+Private Function Search_File_Exist(TargetTable as String) as Boolean
+    Dim Version_Changed as Boolean
     Dim ADO_rs as ADODB.Recordset
     Set ADO_rs = new ADODB.Recordset
 
@@ -23,34 +27,34 @@ Private Sub Search_File_Exist(TargetTable as String)
     'Do:ADO_rs.EOF if ADO_rs!存在=true if dir()="" then ADO_rs!存在=false
 
 
-End Sub
+End Function
 
-Private Sub Search_Folder(GroupName as String , FolderName as String , Str_Expression as String , TargetTable as String , Time_Search_Started as Variant)
+Private Function Search_Folder(GroupName as String , FolderName as String , Str_Expression as String , TargetTable as String , Time_Search_Started as Variant) as Boolean
 
     Dim FileNames(500) as String , FileNamesCount as integer , ThisFileName as String
     Dim ADO_rs as ADODB.Recordset
-    Dim RE_PreEdit as RegExp , R_Match as Match
+    Dim R_Exp as RegExp , R_Match as Match
 
     Dim Str_Expression_Edited as String
 
     Set ADO_rs = new ADODB.Recordset
-    Set RE_PreEdit as new RegExp
+    Set R_Exp as new RegExp
 
     'RE_PreEdit初始设置
-    RE_PreEdit.IgnoreCase=True
-    RE_PreEdit.Global=True
+    R_Exp.IgnoreCase=True
+    R_Exp.Global=True
 
     '为<>外的特殊字符增加转义字符 "([\$\(\)\[\]\{\}\.\+\?])(?![^<]*>)"
-    RE_PreEdit.Pattern="([\$\(\)\[\]\{\}\.\+\?])(?![^<]*>)"
-    Str_Expression_Edited = RE_PreEdit.Replace(Str_Expression,"\$1")
+    R_Exp.Pattern="([\$\(\)\[\]\{\}\.\+\?])(?![^<]*>)"
+    Str_Expression_Edited = R_Exp.Replace(Str_Expression,"\$1")
 
     '<ver>替换为提取文本
-    RE_PreEdit.Pattern="<ver>"
-    Str_Expression_Edited = RE_PreEdit.Replace(Str_Expression_Edited,"(?:[^\.0-9]*?|[^\.]*?[^\.0-9]+?)([0-9]+)(?:\.([0-9]+))+.*?")
+    R_Exp.Pattern="<ver>"
+    Str_Expression_Edited = R_Exp.Replace(Str_Expression_Edited,"(?:[^\.0-9]*?|[^\.]*?[^\.0-9]+?)([0-9]+)(?:\.([0-9]+))+.*?")
 
     '删除<>
-    RE_PreEdit.Pattern="<(.*?)>"
-    Str_Expression_Edited = RE_PreEdit.Replace(Str_Expression_Edited,"$1")
+    R_Exp.Pattern="<(.*?)>"
+    Str_Expression_Edited = R_Exp.Replace(Str_Expression_Edited,"$1")
 
 
     Time_Search_Started = Now()
@@ -79,21 +83,13 @@ Private Sub Search_Folder(GroupName as String , FolderName as String , Str_Expre
     
         'ThisFileName=dir(FolderName)  Do:ThisFileName=dir
 
-            'if RE_PreEdit.Test (Thisfilename , Str_Expression) then Set R_Matchs = RE_PreEdit.Execute
-
             'For:If:FileNames=Thisfilename ThisFileName=""
+
+            'if R_Exp.Test (Thisfilename , Str_Expression) then Set R_Matchs = R_Exp.Execute
 
             'ADO_rs add(GroupName,FolderName,ThisFileName)
             
             'FileNames(+1)=ThisFileName
 
 
-End sub
-
-        
-        'Need to EDIT:
-        'Sub => function Boolean
-        'RE_P rename
-        'Return Version_Changed as Boolean
-        
-        
+End sub      
