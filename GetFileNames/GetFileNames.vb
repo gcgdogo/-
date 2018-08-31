@@ -1,5 +1,5 @@
 'Search_Origin_Table = 识别目标 ( ID , 添加时间 , 文件组 , 文件夹 , 文件名规则 , 现存符合文件数量 , 最新发现时间 , 最新版本号 , 发现时间匹配 , 版本号匹配)
-'TargetTable = 识别结果 ( ID , 发现时间 , 文件组 , 文件夹 , 文件名 , 符合规则 , 版本号 , 存在)
+'TargetTable = 识别结果 ( ID , 发现时间 , 文件组 , 文件夹 , 文件名 , 版本号 , 存在)
 
 Function Get_File_Names(Search_Origin_Table as String , TargetTable as String ) as Boolean
     Dim Version_Changed as Boolean
@@ -42,9 +42,9 @@ Private Function Search_File_Exist(TargetTable as String) as Boolean
     'Do:ADO_rs.EOF if ADO_rs!存在=true if Dir()="" Then ADO_rs!存在=False
     Do While ADO_rs.EOF=False
         if ADO_rs!存在=True Then
-            if right(ADO_rs!文件夹,1)="" then Dir_String= ADO_rs!文件夹 & ADO_rs!文件名 else Dir_String= ADO_rs!文件夹 & "\" & ADO_rs!文件名
+            if right(ADO_rs!文件夹,1)="\" then Dir_String= ADO_rs!文件夹 & ADO_rs!文件名 else Dir_String= ADO_rs!文件夹 & "\" & ADO_rs!文件名
             if Dir(Dir_String)="" then
-                if ADO_rs!符合规则=True then Version_Changed=True
+                Version_Changed=True
                 ADO_rs!存在=False
                 ADO_rs.Update
             end if
@@ -108,6 +108,9 @@ Private Function Search_Folder(GroupName as String , FolderName as String , Str_
     Time_Search_Started = Now()
     Version_Changed=False
 
+    '正则表达式条件设置
+    R_Exp.Pattern=Str_Expression_Edited
+
     '重新打开ADO用来写入新发现文件
     ADO_rs.ActiveConnection=CurrentProject.Connection
     ADO_rs.Source= TargetTable
@@ -118,19 +121,18 @@ Private Function Search_Folder(GroupName as String , FolderName as String , Str_
     'ThisFileName=Dir(FolderName)  Do:ThisFileName=Dir
     ThisFileName=Dir(FolderName)
     Do While ThisFileName<>""
-
-        'For:If:FileNames=Thisfilename ThisFileName=""
+        '查找历史项目 For:If:FileNames=Thisfilename ThisFileName=""
         For FileNamesFinger=1 To FileNamesCount
             If FileNames(FileNamesFinger)=ThisFileName Then Exit For
         Next
-        '无匹配项则新增
-        If FileNamesFinger>FileNamesCount Then
+        '无匹配项 且符合R_Exp 则新增
+        If FileNamesFinger>FileNamesCount and R_Exp.Test(ThisFileName)=True Then
             if FileNamesFinger<>FileNamesCount+1 then
                 Msgbox("ERROR::FileNamesFinger 循环出现错误")
                 Exit Function
             end if
 
-            '识别结果 ( ID , 发现时间 , 文件组 , 文件夹 , 文件名 , 符合规则 , 版本号 , 存在)
+            '识别结果 ( ID , 发现时间 , 文件组 , 文件夹 , 文件名 , 版本号 , 存在)
             ADO_rs.AddNew
 
             ADO_rs!发现时间=Time_Search_Started
@@ -139,11 +141,10 @@ Private Function Search_Folder(GroupName as String , FolderName as String , Str_
             ADO_rs!文件名=ThisFileName
             ADO_rs!存在=True
 
-            'if R_Exp.Test (Thisfilename , Str_Expression) Then Set R_SubMatchs = R_Exp.Execute.item0.SubMatches
-            R_Exp.Pattern=Str_Expression_Edited
-            if R_Exp.Test(ThisFileName)=True Then
-                ADO_rs!符合规则=True
-                Version_Changed=True
+            Version_Changed=True
+
+            'if R_Exp.Test (Thisfilename , Str_Expression) Then 
+            'Set R_SubMatchs = R_Exp.Execute.item0.SubMatches
 
                 'RegExp系列的 Item 都是从零开始计数的 即范围为[ 0 ~ Count-1 ]
                 Set R_SubMatchs = R_Exp.Execute(ThisFileName).Item(0).SubMatches
