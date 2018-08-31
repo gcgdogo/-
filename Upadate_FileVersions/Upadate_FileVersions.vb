@@ -4,7 +4,14 @@
 Function Upadate_FileVersions(Search_Origin_Table as String , TargetTable as String ) as Boolean
     Dim Version_Changed as Boolean
     Dim ADO_rs as New ADODB.Recordset
+    Static LastSearch_Timer as Double
 
+    'LastSearch_Timer 检测计时器时间,如果在15秒内运行过则跳过这次查询
+    if LastSearch_Timer>0 and Timer()-LastSearch_Timer<15 then
+    	Upadate_FileVersions = False
+    	Exit Function
+	end If
+	
     Version_Changed=False
 
     '调用 Search_File_Exist
@@ -23,6 +30,7 @@ Function Upadate_FileVersions(Search_Origin_Table as String , TargetTable as Str
         ADO_rs.MoveNext
     Loop
 
+    LastSearch_Timer=Timer()
     Upadate_FileVersions=Version_Changed
 End Function
 
