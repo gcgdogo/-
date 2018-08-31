@@ -1,7 +1,7 @@
-'Search_Origin_Table = 识别目标 ( ID , 添加时间 , 文件组 , 文件夹 , 文件名规则 , 现存符合文件数量 , 最新发现时间 , 最新版本号 , 发现时间匹配 , 版本号匹配)
-'TargetTable = 识别结果 ( ID , 发现时间 , 文件组 , 文件夹 , 文件名 , 版本号 , 存在)
+'Search_Origin_Table = 识别规则 ( ID , 添加时间 , 运行 , 文件组 , 文件夹 , 文件名规则 , 文件夹内现存文件 , 组内最新时间 , 组内版本号 , 组内匹配数量 , 匹配文件名 , 匹配完整路径)
+'TargetTable = 识别文件列表 ( ID , 发现时间 , 文件组 , 文件夹 , 文件名 , 版本号 , 存在)
 
-Function Get_File_Names(Search_Origin_Table as String , TargetTable as String ) as Boolean
+Function Upadate_FileVersions(Search_Origin_Table as String , TargetTable as String ) as Boolean
     Dim Version_Changed as Boolean
     Dim ADO_rs as New ADODB.Recordset
 
@@ -12,7 +12,7 @@ Function Get_File_Names(Search_Origin_Table as String , TargetTable as String ) 
 
     'Set:ADO_rs source=Search_Origin_Table
     ADO_rs.ActiveConnection=CurrentProject.Connection
-    ADO_rs.Source=Search_Origin_Table
+    ADO_rs.Source="SELECT * FROM " & Search_Origin_Table & " WHERE 运行=True"
     ADO_rs.CursorType=adOpenStatic
     ADO_rs.LockType=adLockReadOnly
     ADO_rs.Open
@@ -23,7 +23,7 @@ Function Get_File_Names(Search_Origin_Table as String , TargetTable as String ) 
         ADO_rs.MoveNext
     Loop
 
-    Get_File_Names=Version_Changed
+    Upadate_FileVersions=Version_Changed
 End Function
 
 Private Function Search_File_Exist(TargetTable as String) as Boolean
@@ -53,8 +53,8 @@ Private Function Search_File_Exist(TargetTable as String) as Boolean
     Loop 
 
     ADO_rs.Close
-    Search_File_Exist=Version_Changed
 
+    Search_File_Exist=Version_Changed
 End Function
 
 Private Function Search_Folder(GroupName as String , FolderName as String , Str_Expression as String , TargetTable as String ) as Boolean
