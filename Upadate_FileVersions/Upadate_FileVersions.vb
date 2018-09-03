@@ -119,7 +119,8 @@ Private Function Search_Folder(GroupName as String , FolderName as String , Str_
     ADO_rs.Open
 
     'ThisFileName=Dir(FolderName)  Do:ThisFileName=Dir
-    ThisFileName=Dir(FolderName)
+    '文件夹末尾不是 \ 则新增
+    if right(FolderName,1)="\" then ThisFileName=Dir(FolderName) else ThisFileName=Dir(FolderName & "\")
     Do While ThisFileName<>""
         '查找历史项目 For:If:FileNames=Thisfilename ThisFileName=""
         For FileNamesFinger=1 To FileNamesCount
