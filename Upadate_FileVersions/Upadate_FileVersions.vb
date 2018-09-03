@@ -63,7 +63,7 @@ Private Function Search_Folder(GroupName as String , FolderName as String , Str_
     Dim I as Integer
 
     Dim ADO_rs as New ADODB.Recordset
-    Dim R_Exp as New RegExp , R_SubMatchs as Match.SubMatches
+    Dim R_Exp as New RegExp , R_SubMatchs as SubMatches
 
     Dim Str_Expression_Edited as String , VerPhaseString as String , Time_Search_Started as Variant
     Dim Version_Changed as Boolean
