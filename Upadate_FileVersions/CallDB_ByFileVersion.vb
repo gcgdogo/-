@@ -1,6 +1,11 @@
-Static CallDB_Application as Application
+Option Explicit
 
-Function CallDB_All_in_One(GroupName as String) as Variant
+Static CallDB_Application as Application
+Static App_HasDiary as Boolean , CallDB_HasDiary as Boolean
+
+Private Function Set_DBVersions_Direction() as String : Set_DBVersions_Direction = "F:\Database\数据库版本识别\DB_Versions.accdb" : End Function
+
+Function CallDB_All_in_One(GroupName as String , MacroName as String) as Variant
 End Function
 
 Function CallDB_Connect(GroupName as String) as Variant
@@ -12,3 +17,8 @@ Function CallDB_Connect(GroupName as String) as Variant
 
 End Function
 
+'Example:
+'[Call]>>LangxinData: 获取文件版本 Get_FileVersion = LangxinData_1.12.1 [Hub Mod;Diary].accdb
+'[Call]>>LangxinData: Diary_Application_Set : Diary 更新目标设置 / 未检测到 Diary_Application_Set
+'[Call]>>LangxinData: <运行> 目标宏
+'[Call:LangxinData] ~~~~~~~
