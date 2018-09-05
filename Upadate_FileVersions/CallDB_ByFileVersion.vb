@@ -42,12 +42,8 @@ CallDB_FirstSet:
 		App_HasDiary = True
 		'检测目标数据库是否有 Diary   建立 Diary 连接  On Error Goto CallDB_Diary_Fail
 		On Error Goto CallDB_Diary_Fail
-			If Diary_Application is Nothing Then
-				Calling = CallDB_Application.Run("Diary_Application_Set" , Application)
-			Else
-				Calling = CallDB_Application.Run("Diary_Application_Set" , Diary_Application)
-			End IF
-			Calling = CallDB_Application.Run("Diary_HeadString_Set" , Diary_HeadString & "[Call:" & GroupName & "] ")
+			Calling = CallDB_Application.Run("Diary_Application_Set" , Application)
+			Calling = CallDB_Application.Run("Diary_HeadString_Set" , "[Call:" & GroupName & "] ")
 			CallDB_HasDiary = True
 CallDB_Diary_Fail:
 		On Error Goto App_Diary_Fail
