@@ -1,7 +1,7 @@
 Option Compare Database
 Option Explicit
 
-Static Diary_Application as Application , Diary_HeadString as String
+Public Diary_Application as Application , Diary_HeadString as String
 
 Sub Diary_Application_Set(X_App as Application)
     Set Diary_Application = X_App
@@ -18,19 +18,21 @@ Function Diary_Add(In_Type As String, In_Txt As String)
     Set DiaryADO = New ADODB.Recordset
     Dim DiarySQL As String
 
-    '检测 Diary_Application 是否已设定 (Nothing)
-    If Diary_Application is Nothing Then Set Diary_Application = Application
+    '如果已设置 Diary_Application 则反向调用 Diary_Add
+    If Not (Diary_Application Is Nothing) Then
+        Diary_Application.Run "Diary_Add", In_Type, Diary_HeadString & In_Txt
+        Exit Function
+    End If
 
     DiarySQL = "INSERT INTO Temp_Diary ( Type, [Time], ms, Txt ) SELECT """ & In_Type & """,now(),""" & CStr((Timer() * 1000) Mod 1000) & """ , """ & In_Txt & """;"
     DiaryADO.Source = DiarySQL
-    DiaryADO.ActiveConnection = Diary_Application.CurrentProject.Connection
+    DiaryADO.ActiveConnection = CurrentProject.Connection
     DiaryADO.Open
     
-    Diary_Application.Forms("diary").Requery
-    Diary_Application.Forms("diary").Repaint
+    Application.Forms("diary").Requery
+    Application.Forms("diary").Repaint
     
-    Do While Diary_Application.Forms("diary").Dirty = True
-        DoEvents
+    Do While Form_Diary.Dirty = True
         DoEvents
         DoEvents
         DoEvents
@@ -39,5 +41,5 @@ Function Diary_Add(In_Type As String, In_Txt As String)
 End Function
 
 Sub Test()
-x = Diary_Add_2("asdf", "asdf")
+    Diary_Add "asdf", "asdf"
 End Sub

@@ -1,7 +1,7 @@
 Option Explicit
 
-Static CallDB_Application as Application
-Static App_HasDiary as Boolean , CallDB_HasDiary as Boolean
+Public CallDB_Application as Application
+Public App_HasDiary as Boolean , CallDB_HasDiary as Boolean
 
 Private Function Set_DBVersions_Direction() as String : Set_DBVersions_Direction = "F:\Database\数据库版本识别\DB_Versions.accdb" : End Function
 
@@ -28,6 +28,11 @@ CallDB_FirstSet:
 	TarDB_Direction = CallDB_Application.Run( "Get_FileVersion" , GroupName , True)
 	TarDB_Filename = CallDB_Application.Run( "Get_FileVersion" , "" , False)
 
+	'调用目标数据库
+	CallDB_Application.Quit
+	Set CallDB_Application = New Access.Application
+	CallDB_Application.OpenCurrentDatabase(TarDB_Direction)
+
 	'检测当前数据库是否有 Diary    On Error Goto App_Diary_Fail
 	App_HasDiary = False
 	CallDB_HasDiary = False
@@ -47,6 +52,7 @@ CallDB_Diary_Fail:
 		Else
 			Calling = Diary_Add("Message", "[Call]>>" & GroupName & ": 未检测到 Diary_Application_Set")
 		End If
+App_Diary_Fail:
 	On Error Goto 0
 End Function
 
