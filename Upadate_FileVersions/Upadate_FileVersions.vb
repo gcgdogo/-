@@ -65,7 +65,7 @@ Private Function Search_Folder(GroupName as String , FolderName as String , Str_
     Dim ADO_rs as New ADODB.Recordset
     Dim R_Exp as New RegExp , R_SubMatchs as SubMatches
 
-    Dim Str_Expression_Edited as String , VerPhaseString as String , Time_Search_Started as Variant
+    Dim Str_Expression_Edited as String , VerPhaseString as String , Time_Search_Started as String
     Dim Version_Changed as Boolean
 
     'RE_PreEdit初始设置
@@ -105,7 +105,7 @@ Private Function Search_Folder(GroupName as String , FolderName as String , Str_
     ADO_rs.Close
     
     '文件夹循环开始前变量赋值
-    Time_Search_Started = Now()
+    Time_Search_Started = format(Now(),"yyyy-mm-dd hh:nn:ss")
     Version_Changed=False
 
     '正则表达式条件设置
