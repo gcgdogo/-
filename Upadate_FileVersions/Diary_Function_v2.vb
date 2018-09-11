@@ -40,6 +40,33 @@ Function Diary_Add(In_Type As String, In_Txt As String)
     
 End Function
 
+'报告对应命令执行发生时间
+Function Diary_TimeElapsed( Optional Condition_Exp as String = "" , Optional Exception_Exp as String = "[Call:*" ) as Variant
+    Dim CommandTime as Variant , TimeElapsed as Double
+    CommandTime = Diary_CommandTime( "*" & Condition_Exp & "*" , Exception_Exp )
+    If CommandTime = "未找到对应记录" Then
+        Diary_Add("Message" , "[TimeElapsed] 未找到对应记录")
+        Exit Function
+    End If
+
+    TimeElapsed = ( Now() - CommandTime ) * 24 * 60 * 60
+    If TimeElapsed > 7200 Then
+        Diary_Add("Message" , "[TimeElapsed] 时间过长")
+        Exit Function
+    End If
+
+    Diary_Add("Message" , "[TimeElapsed] = " & Format( TimeElapsed , "#,##0" ) & "s")
+    
+End Function
+
+Function Diary_CommandTime(Condition_Exp as String , Exception_Exp as String) as Variant
+    If Not (Diary_Application Is Nothing) Then
+        Diary_CommandTime = Diary_Application.Run ("Diary_CommandTime", Diary_HeadString & Condition_Exp , Diary_HeadString & Exception_Exp)
+        Exit Function
+    End If
+    Diary_CommandTime = DMax("Time","Temp_Diary","Type=""Command"" and Txt Like """ & Condition_Exp & """ and Txt Not Like """ & Exception_Exp & """")
+End Function
+
 Sub Test()
     Diary_Add "asdf", "asdf"
 End Sub
