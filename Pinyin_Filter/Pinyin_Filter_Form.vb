@@ -72,8 +72,8 @@ Private Sub TextBox_Pinyin_Change()
 
     Me.ListBox_Optional.Clear
 
-    '先按大写首字母测试
-    RegExp_Chk.Pattern = RegExp_Chk.Replace(Ucase(TextBox_Pinyin.Value) , "$1[^,:]*")
+    '先按大写首字母测试 , 不能有多余大写字母
+    RegExp_Chk.Pattern = "[^a-zA-Z]" & RegExp_Chk.Replace(Ucase(TextBox_Pinyin.Value) , "$1[^,:A-Z]*") & "[^A-Z]*,"
     RegExp_Chk.IgnoreCase = False
     For I = 1 To X_Count
         If RegExp_Chk.Test(X_Text(I))=True Then ListBox_Optional.AddItem(X_Text(I))
@@ -96,10 +96,15 @@ End Sub
 '_________________________________________________ListBox
 Private Sub ListBox_Confirmed_DblClick(ByVal Cancel As MSForms.ReturnBoolean)
     Me.ListBox_Confirmed.RemoveItem (Me.ListBox_Confirmed.ListIndex)
+    '让输入框保持焦点
+    Me.TextBox_Pinyin.SetFocus
 End Sub
 
 Private Sub ListBox_Optional_DblClick(ByVal Cancel As MSForms.ReturnBoolean)
     Me.ListBox_Confirmed.AddItem (Me.ListBox_Optional.Value)
+    '清空 并让输入框保持焦点
+    Me.TextBox_Pinyin.Text = ""
+    Me.TextBox_Pinyin.SetFocus
 End Sub
 
 '_________________________________________________Button
