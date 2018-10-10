@@ -1,4 +1,6 @@
-Sub Range_to_Pinyin()
+Option Explicit
+
+Sub Range_to_Pinyin(control As IRibbonControl)
 	Dim Range_A as Range , Range_B as Range
 	Dim Range_Phrase as Range , Range_Pinyin as Range
 	Dim X as Range
