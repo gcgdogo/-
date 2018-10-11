@@ -20,25 +20,32 @@ Private Sub UserForm_Initialize()
     StartTime=Timer()
     X_Count=0
     If ActiveSheet.AutoFilterMode = False Then
-        MsgBox ("需要启用筛选")
-        Exit Sub
+        Selection.Cells(1).AutoFilter
     End If
+
     Set FilterRange = ActiveSheet.AutoFilter.Range
     FilterNum = Selection.Cells(1).Column - FilterRange.Cells(1).Column + 1
+
     If FilterRange.Columns(FilterNum).Cells.Count > 50000 Then
         MsgBox ("筛选范围过大 [>50000]")
         Exit Sub
     End If
 
+    '解除需要筛选列的筛选状态
+    FilterRange.AutoFilter field:=FilterNum
+
     For Each X_Cell In FilterRange.Columns(FilterNum).cells
-        For I=1 To X_Count
-            If X_Phrase(I)=X_Cell.Value Then Exit For         
-        Next
-        If I>X_Count Then
-            Redim Preserve X_Phrase(I) As String, X_Text(I) As String
-            X_Phrase(I) = X_Cell.Value
-            X_Text(I) = Left(X_Cell.Value & "　　　　" ,IIF(Len(X_Cell.Value)>4,Len(X_Cell.Value),4)) & ": " & Phrase_to_pinyin(X_Cell.Value)
-            X_Count=I
+        '不加载在其他筛选条件中已经指定隐藏的项目
+        If X_Cell.EntireRow.Hidden = False Then
+            For I=1 To X_Count
+                If X_Phrase(I)=X_Cell.Value Then Exit For         
+            Next
+            If I>X_Count Then
+                Redim Preserve X_Phrase(I) As String, X_Text(I) As String
+                X_Phrase(I) = X_Cell.Value
+                X_Text(I) = Left(X_Cell.Value & "　　　　" ,IIF(Len(X_Cell.Value)>4,Len(X_Cell.Value),4)) & ": " & Phrase_to_pinyin(X_Cell.Value)
+                X_Count=I
+            End If
         End If
     Next
 
@@ -115,6 +122,11 @@ Private Sub Button_ChooseAll_Click()
         'ListBox.List 列表从零开始
         Me.ListBox_Confirmed.AddItem (Me.ListBox_Optional.List(I-1))
     Next
+
+    '清空 并让输入框保持焦点
+    Me.TextBox_Pinyin.Text = ""
+    Me.TextBox_Pinyin.SetFocus
+    
 End Sub
 
 Private Sub Button_Execute_Click()
