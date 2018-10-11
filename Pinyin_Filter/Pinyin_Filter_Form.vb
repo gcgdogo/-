@@ -3,6 +3,9 @@ Option Explicit
 Dim X_Phrase() As String, X_Text() As String, X_Count As Long
 Dim FilterRange As Range, FilterNum As Long
 
+'双击事件需要参数 MSForms.ReturnBoolean , 不知道是啥 , 给它随便定义一个值吧
+Dim Give_It_MSForms_ReturnBoolean As MSForms.ReturnBoolean
+
 '_________________________________________________Initalize
 '直接再Initalize事件中关闭窗口会报错,所以在激活时检验是否数据已经初始化
 Private Sub UserForm_Activate()
@@ -58,10 +61,13 @@ End Sub
 Private Sub TextBox_Pinyin_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shift As Integer)
 
     'Enter = 全部导入
-    If KeyCode = 13 and Shift = 0 Then Call Button_ChooseAll_Click
+    If KeyCode = vbKeyReturn and Shift = 0 Then Call Button_ChooseAll_Click
     'Ctrl+Enter = 执行
-    If KeyCode = 13 and Shift = 2 Then Call Button_Execute_Click
+    If KeyCode = vbKeyReturn and Shift = 2 Then Call Button_Execute_Click
 
+    '下箭头转到
+    If KeyCode = vbKeyDown Then Me.ListBox_Optional.SetFocus
+    
 End Sub
 
 
@@ -102,18 +108,48 @@ End Sub
 
 '_________________________________________________ListBox
 Private Sub ListBox_Confirmed_DblClick(ByVal Cancel As MSForms.ReturnBoolean)
-    Me.ListBox_Confirmed.RemoveItem (Me.ListBox_Confirmed.ListIndex)
+    Me.ListBox_Confirmed.RemoveItem (IIF(Me.ListBox_Confirmed.ListIndex>=0,Me.ListBox_Confirmed.ListIndex,0))
+
+    Me.ListBox_Confirmed.ListIndex=-1
     '让输入框保持焦点
     Me.TextBox_Pinyin.SetFocus
 End Sub
 
 Private Sub ListBox_Optional_DblClick(ByVal Cancel As MSForms.ReturnBoolean)
-    Me.ListBox_Confirmed.AddItem (Me.ListBox_Optional.Value)
+    Me.ListBox_Confirmed.AddItem (Me.ListBox_Optional.List(IIF(Me.ListBox_Optional.ListIndex>=0,Me.ListBox_Optional.ListIndex,0)))
+
+    Me.ListBox_Optional.ListIndex=-1
     '清空 并让输入框保持焦点
     Me.TextBox_Pinyin.Text = ""
     Me.TextBox_Pinyin.SetFocus
 End Sub
 
+'回车映射到DblClick,左右键为两窗口间转换
+Private Sub ListBox_Confirmed_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shift As Integer)
+    If KeyCode = vbKeyReturn and Shift = 0  Then Call ListBox_Confirmed_DblClick(Give_It_MSForms_ReturnBoolean)
+
+    '移动时清空选择
+    If KeyCode = vbKeyLeft Then
+        Me.ListBox_Confirmed.ListIndex=-1
+        Me.ListBox_Optional.SetFocus
+    End If
+
+    'Ctrl+Enter = 执行
+    If KeyCode = vbKeyReturn and Shift = 2 Then  Call Button_Execute_Click
+End Sub
+
+Private Sub ListBox_Optional_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shift As Integer)
+    If KeyCode = vbKeyReturn and Shift = 0  Then Call ListBox_Optional_DblClick(Give_It_MSForms_ReturnBoolean)
+
+    '移动时清空选择
+    If KeyCode = vbKeyRight Then 
+        Me.ListBox_Optional.ListIndex=-1
+        Me.ListBox_Confirmed.SetFocus
+    End If
+
+    'Ctrl+Enter = 执行
+    If KeyCode = vbKeyReturn and Shift = 2 Then  Call Button_Execute_Click
+End Sub
 '_________________________________________________Button
 
 Private Sub Button_ChooseAll_Click()
