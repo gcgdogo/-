@@ -1,6 +1,6 @@
 Option Explicit
-
-Dim X_Phrase() As String, X_Text() As String, X_Count As Long
+'X_Phrase() As String, 
+Dim X_Text() As String, X_Count As Long
 Dim FilterRange As Range, FilterNum As Long
 
 '双击事件需要参数 MSForms.ReturnBoolean , 不知道是啥 , 给它随便定义一个值吧
@@ -17,10 +17,13 @@ Private Sub UserForm_Activate()
 End Sub
 
 Private Sub UserForm_Initialize()
-    Dim StartTime as Double
+    Dim StartTime as Double , BreakTime as Double
     Dim X_Cell as Range
+    Dim X_Dict as Object
     Dim I as Long
+
     StartTime=Timer()
+    BreakTime=Timer()
     X_Count=0
     If ActiveSheet.AutoFilterMode = False Then
         Selection.Cells(1).AutoFilter
@@ -29,25 +32,34 @@ Private Sub UserForm_Initialize()
     Set FilterRange = ActiveSheet.AutoFilter.Range
     FilterNum = Selection.Cells(1).Column - FilterRange.Cells(1).Column + 1
 
-    If FilterRange.Columns(FilterNum).Cells.Count > 50000 Then
-        MsgBox ("筛选范围过大 [>50000]")
-        Exit Sub
-    End If
+    '移除区域大小上限
+
+    'If FilterRange.Columns(FilterNum).Cells.Count > 50000 Then
+        'MsgBox ("筛选范围过大 [>50000]")
+        'Exit Sub
+    'End If
 
     '解除需要筛选列的筛选状态
     FilterRange.AutoFilter field:=FilterNum
 
+    '使用Dictionay 提高已计算项查询速度
+    Set X_Dict = CreateObject("Scripting.Dictionary")
+
     For Each X_Cell In FilterRange.Columns(FilterNum).cells
+        '添加时间过长则中断一下，防止系统判定死机
+        If Timer()-BreakTime > 5 Then
+            DoEvents
+            DoEvents
+            DoEvents
+            BreakTime=Timer()
+        End If
         '不加载在其他筛选条件中已经指定隐藏的项目
-        If X_Cell.EntireRow.Hidden = False Then
-            For I=1 To X_Count
-                If X_Phrase(I)=X_Cell.Value Then Exit For         
-            Next
-            If I>X_Count Then
-                Redim Preserve X_Phrase(I) As String, X_Text(I) As String
-                X_Phrase(I) = X_Cell.Value
-                X_Text(I) = Left(X_Cell.Value & "　　　　" ,IIF(Len(X_Cell.Value)>4,Len(X_Cell.Value),4)) & ": " & Phrase_to_pinyin(X_Cell.Value)
-                X_Count=I
+        If X_Cell.EntireRow.Hidden = False and X_Cell.Text<>"" Then
+            If X_Dict.Exists(X_Cell.Text) =False Then
+                X_Dict.Add X_Cell.Text , ""
+                X_Count=X_Count+1
+                Redim Preserve X_Text(X_Count) As String
+                X_Text(X_Count) = Left(X_Cell.Value & "　　　　" ,IIF(Len(X_Cell.Value)>4,Len(X_Cell.Value),4)) & ": " & Phrase_to_pinyin(X_Cell.Value)
             End If
         End If
     Next
