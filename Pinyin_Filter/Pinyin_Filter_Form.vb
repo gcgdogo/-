@@ -17,7 +17,7 @@ Private Sub UserForm_Activate()
 End Sub
 
 Private Sub UserForm_Initialize()
-    Dim StartTime as Double , BreakTime as Double
+    Dim StartTime as Double , BreakTime as Double , BlankCount as Long
     Dim X_Cell as Range
     Dim X_Dict as Object
     Dim I as Long
@@ -54,12 +54,19 @@ Private Sub UserForm_Initialize()
             BreakTime=Timer()
         End If
         '不加载在其他筛选条件中已经指定隐藏的项目
-        If X_Cell.EntireRow.Hidden = False and X_Cell.Text<>"" Then
-            If X_Dict.Exists(X_Cell.Text) =False Then
-                X_Dict.Add X_Cell.Text , ""
-                X_Count=X_Count+1
-                Redim Preserve X_Text(X_Count) As String
-                X_Text(X_Count) = Left(X_Cell.Value & "　　　　" ,IIF(Len(X_Cell.Value)>4,Len(X_Cell.Value),4)) & ": " & Phrase_to_pinyin(X_Cell.Value)
+        If X_Cell.EntireRow.Hidden = False Then
+            If X_Cell.Text<>"" Then
+                BlankCount = 0
+                If X_Dict.Exists(X_Cell.Text) =False Then
+                    X_Dict.Add X_Cell.Text , ""
+                    X_Count=X_Count+1
+                    Redim Preserve X_Text(X_Count) As String
+                    X_Text(X_Count) = Left(X_Cell.Value & "　　　　" ,IIF(Len(X_Cell.Value)>4,Len(X_Cell.Value),4)) & ": " & Phrase_to_pinyin(X_Cell.Value)
+                End If
+            Else
+                BlankCount = BlankCount + 1
+                '发现连续10000个空格就结束查找
+                If BlankCount > 10000 Then Exit For
             End If
         End If
     Next
