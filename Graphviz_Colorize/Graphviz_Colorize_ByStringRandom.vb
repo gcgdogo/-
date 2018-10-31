@@ -1,21 +1,55 @@
 Option Explicit
 
-Public Function GColorize_String (Seed_A as String , Optional Seed_B as String = "" , Optional GradualStages as Long = 1) as String
+Public Function GColorize_String (Seed_A as String , Optional Seed_B as String = "" ) as String
     Dim RGB_A as Long , RGB_B as Long , I as Long
-    If GradualStages = 1 Then
+    Dim GradualStages as Long
+
+    If Seed_B = "" Then
         GColorize_String = "#" & Right("000000" & Hex(Get_Color(Get_SeedCode(Seed_A))) , 6)
         'msgbox(Seed_A & Get_SeedCode(Seed_A) & Hex(Get_Color(Get_SeedCode(Seed_A))))
     Else
         RGB_A = Get_Color(Get_SeedCode(Seed_A))
         RGB_B = Get_Color(Get_SeedCode(Seed_B))
 
+        If RGB_A = RGB_B Then
+            GColorize_String = "#" & Right("000000" & Hex(Get_Color(Get_SeedCode(Seed_A))) , 6)
+            Exit Function
+        End If
+
+        GradualStages = Get_GradualStages( RGB_A , RGB_B )
         GColorize_String=""
+
         For I = 1 To GradualStages
             GColorize_String = GColorize_String & "#" & Right("000000" & Hex(RGB_Gradual(RGB_A , RGB_B , CDbl(I-1) / (GradualStages - 1))) , 6)
-            If I = 1 Then GColorize_String = GColorize_String & ";" & (1.0 / (GradualStages - 1))
+            '附加一个比例数来将颜色纵向排列, 比例数格式化为8位小数
+            If I = 1 Then GColorize_String = GColorize_String & ";" & Format( 1.0 / (GradualStages - 1) , "0.00000000" )
             If I < GradualStages Then GColorize_String = GColorize_String & ":"
         Next
     End If
+
+End Function
+
+Private Function Get_GradualStages(RGB_A as Long , RGB_B as Long) as Long
+    Dim RGB_A_1 as Double , RGB_A_2 as Double ,  RGB_A_3 as Double
+    Dim RGB_B_1 as Double , RGB_B_2 as Double ,  RGB_B_3 as Double
+    Dim Color_Steps as Integer
+
+    '设置颜色级差
+    Color_Steps = 10
+
+    RGB_A_1 = Int(RGB_A / 256 / 256)
+    RGB_A_2 = Int(RGB_A / 256) mod 256
+    RGB_A_3 = RGB_A mod 256
+
+    RGB_B_1 = Int(RGB_B / 256 / 256)
+    RGB_B_2 = Int(RGB_B / 256) mod 256
+    RGB_B_3 = RGB_B mod 256
+    
+    Get_GradualStages = 2
+
+    If ( Abs(RGB_A_1 - RGB_B_1) / Color_Steps ) > Get_GradualStages Then Get_GradualStages = ( Abs(RGB_A_1 - RGB_B_1) / Color_Steps )
+    If ( Abs(RGB_A_2 - RGB_B_2) / Color_Steps ) > Get_GradualStages Then Get_GradualStages = ( Abs(RGB_A_2 - RGB_B_2) / Color_Steps )
+    If ( Abs(RGB_A_3 - RGB_B_3) / Color_Steps ) > Get_GradualStages Then Get_GradualStages = ( Abs(RGB_A_3 - RGB_B_3) / Color_Steps )
 
 End Function
 
