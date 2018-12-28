@@ -22,7 +22,7 @@ Public Function GColorize_String (Seed_A as String , Optional Seed_B as String =
         For I = 1 To GradualStages
             GColorize_String = GColorize_String & "#" & Right("000000" & Hex(RGB_Gradual(RGB_A , RGB_B , CDbl(I-1) / (GradualStages - 1))) , 6)
             '附加一个比例数来将颜色纵向排列, 比例数格式化为8位小数
-            If I = 1 Then GColorize_String = GColorize_String & ";" & Format( 1.0 / (GradualStages - 1) , "0.00000000" )
+            If I = 1 Then GColorize_String = GColorize_String & ";" & Format( 1.0 / GradualStages , "0.00000000" )
             If I < GradualStages Then GColorize_String = GColorize_String & ":"
         Next
     End If
