@@ -3,12 +3,27 @@ Option Explicit
 Dim Value_Dictionary(2) as Object
 Dim Range_Matched(2) as String
 Dim Range_TobeMatched(2) as Range
+Dim Range_TobeMatched_TotalRows as Long
 
+Dim StartTimer as Double
 Dim Worksheet_ForList as Worksheet , Worksheet_ForList_Finger as Long
 
 '总程序,反复执行 Try_ValueMatch
 Sub Execute_Try_ValueMatch()
     Dim I as Long
+    Dim Ori_StatusBarText as Variant
+
+    If Selection.Areas.Count<>2 Then
+        Msgbox("运行需要用 Ctrl 同时选定两个区域")
+        Exit Sub
+    End If
+
+    Selection.Interior.Pattern = xlNone
+
+    Ori_StatusBarText = Application.StatusBar
+    If Ori_StatusBarText = False Then Ori_StatusBarText = ""
+
+    StartTimer = Timer()
 
     Set Value_Dictionary(1) = CreateObject("Scripting.Dictionary")
     Set Value_Dictionary(2) = CreateObject("Scripting.Dictionary")
@@ -21,7 +36,27 @@ Sub Execute_Try_ValueMatch()
         Range_Matched(1)=""
         Range_Matched(2)=""
         Call Try_ValueMatch
+
         If Range_Matched(1)="" and Range_Matched(2)="" Then
+        
+            Range_TobeMatched(1).Interior.Pattern = xlSolid
+            Range_TobeMatched(1).Interior.Color = 255
+            Range_TobeMatched(2).Interior.Pattern = xlSolid
+            Range_TobeMatched(2).Interior.Color = 255
+
+            Application.StatusBar = Ori_StatusBarText
+            Msgbox("运行结束")
+            Exit Sub
+        End If
+
+        If Range_TobeMatched(1) is Nothing or Range_TobeMatched(2) is Nothing Then
+        
+            Range_TobeMatched(1).Interior.Pattern = xlSolid
+            Range_TobeMatched(1).Interior.Color = 255
+            Range_TobeMatched(2).Interior.Pattern = xlSolid
+            Range_TobeMatched(2).Interior.Color = 255
+
+            Application.StatusBar = Ori_StatusBarText
             Msgbox("运行结束")
             Exit Sub
         End If
@@ -39,6 +74,7 @@ Private Sub Try_ValueMatch()
         Exit Sub
     End If
 
+    Range_TobeMatched_TotalRows = 0
     Set Range_TobeMatched(1) = Get_Range_TobeMatched(Selection.Areas(1))
     Set Range_TobeMatched(2) = Get_Range_TobeMatched(Selection.Areas(2))
     'Msgbox("Range_TobeMatched: " & Union(Range_TobeMatched(1),Range_TobeMatched(2)).address)
@@ -52,8 +88,20 @@ Private Sub Try_ValueMatch()
     Call Try_StyleA_RowsOneByOne(1)
     Call Try_StyleA_RowsOneByOne(2)
 
+
     Call Try_StyleB_FollowingLines(1)
     Call Try_StyleB_FollowingLines(2)
+
+
+    Call Try_StyleC_AllCombinations(1,2)
+    Call Try_StyleC_AllCombinations(2,2)
+    Call Try_StyleC_AllCombinations(1,3)
+    Call Try_StyleC_AllCombinations(2,3)
+    Call Try_StyleC_AllCombinations(1,4)
+    Call Try_StyleC_AllCombinations(2,4)
+    Call Try_StyleC_AllCombinations(1,5)
+    Call Try_StyleC_AllCombinations(2,5)
+
 
     If Range_Matched(1)<>"" and Range_Matched(2)<>"" Then Call Range_MarkAndList(Range(Range_Matched(1)),Range(Range_Matched(2)))
 End Sub 
@@ -103,16 +151,106 @@ Sub Try_StyleB_FollowingLines(Parrent_Range_Num as Integer)
     Next
 End Sub
 
+'第三种方式, 不连续遍历组合
+Sub Try_StyleC_AllCombinations(Parrent_Range_Num as Integer , Deep_Count as Integer)
+
+    '若已找到匹配项 跳出
+    If Range_Matched(1)<>"" and Range_Matched(2)<>"" Then Exit Sub
+
+    Call Try_StyleC_AllCombinations_LoopBack(Parrent_Range_Num , Nothing , Range_TobeMatched(Parrent_Range_Num) , Deep_Count , 10000)
+End Sub
+
+Function Try_StyleC_AllCombinations_LoopBack(Parrent_Range_Num as Integer , Range_Selected as Range , Range_ForSelect as Range , Deep_Count as Integer , Try_Count as Long) as Long
+    Dim Finger_Area as Long, Finger_Row as Long , I as Long
+    Dim Next_Area_ForSelect as Range , Next_Rows_ForSelect as Range , Next_Range_ForSelect as Range
+    Dim Next_Range_Selected as Range
+
+    '先设置好默认返回值
+    Try_StyleC_AllCombinations_LoopBack = Try_Count
+
+    If Deep_Count<0 Then Exit Function
+    If Try_Count = 0 Then Exit Function
+
+
+    '若已找到匹配项 跳出
+    If Range_Matched(1)<>"" and Range_Matched(2)<>"" Then Exit Function
+    If Deep_Count = 0 Then 
+        If not(Range_Selected is Nothing) Then Call Try_Range_CheckAndAdd(Parrent_Range_Num , Range_Selected)
+        Try_StyleC_AllCombinations_LoopBack = Try_Count - 1
+        Exit Function
+    End If
+    If Range_ForSelect is Nothing Then Exit Function
+    For Finger_Area = 1 To Range_ForSelect.Areas.Count
+
+        '若已找到匹配项 跳出
+        If Range_Matched(1)<>"" and Range_Matched(2)<>"" Then Exit Function
+
+        '从Area+1开始循环, 设定 Next_Area_ForSelect
+        Set Next_Area_ForSelect = Nothing
+        For I = Finger_Area + 1 To Range_ForSelect.Areas.Count
+            If Next_Area_ForSelect is Nothing Then
+                Set Next_Area_ForSelect = Range_ForSelect.Areas(I)
+            Else
+                Set Next_Area_ForSelect = Union(Next_Area_ForSelect , Range_ForSelect.Areas(I))
+            End If
+        Next
+
+        For Finger_Row = 1 To Range_ForSelect.Areas(Finger_Area).Rows.Count
+
+        '若已找到匹配项 跳出
+        If Range_Matched(1)<>"" and Range_Matched(2)<>"" Then Exit Function
+
+            '从Row+1开始循环, 设定 Next_Range_ForSelect
+            Set Next_Rows_ForSelect = Nothing
+            For I = Finger_Row+1 To Range_ForSelect.Areas(Finger_Area).Rows.Count
+                If Next_Rows_ForSelect is Nothing Then
+                    Set Next_Rows_ForSelect = Range_ForSelect.Areas(Finger_Area).Rows(I)
+                Else
+                    Set Next_Rows_ForSelect = Union(Next_Rows_ForSelect , Range_ForSelect.Areas(Finger_Area).Rows(I))
+                End If
+            Next
+
+            '组合得出 Next_Range_ForSelect
+            Set Next_Range_ForSelect = Next_Area_ForSelect
+            If Next_Range_ForSelect is Nothing Then
+                Set Next_Range_ForSelect = Next_Rows_ForSelect
+            Else
+                If Not(Next_Rows_ForSelect is Nothing) Then Set Next_Range_ForSelect = Union(Next_Range_ForSelect , Next_Rows_ForSelect)
+            End if
+
+            '组合得出 Next_Range_Selected
+            Set Next_Range_Selected = Range_ForSelect.Areas(Finger_Area).Rows(Finger_Row)
+            If Not(Range_Selected is Nothing) Then Set Next_Range_Selected = Union(Next_Range_Selected , Range_Selected)
+
+            '进行递归调用
+            Try_Count = Try_StyleC_AllCombinations_LoopBack(Parrent_Range_Num , Next_Range_Selected , Next_Range_ForSelect , Deep_Count - 1 , Try_Count)
+
+        Next
+    Next
+
+    '返回 Try_Count
+    Try_StyleC_AllCombinations_LoopBack = Try_Count
+
+End Function
+
 
 
 '监测该项是否能与对面匹配,无匹配则增加至 Dictionary
 Sub Try_Range_CheckAndAdd(Parrent_Range_Num as Integer , X_Range as Range)
-    Static LastTimer_DoEvent as Double
+    Static LastTimer_DoEvent as Double , Check_Count as Long , Check_Count_inTime as Double
     Dim X_Range_Sum as Long
+
+    Check_Count = Check_Count + 1
+    Check_Count_inTime = Check_Count_inTime + 1
+
+    If LastTimer_DoEvent < StartTimer Then LastTimer_DoEvent = StartTimer
+
     '定期 DoEvents
     If Timer() - LastTimer_DoEvent > 1 Then
         DoEvents
+        Application.StatusBar = "待匹配条目 : " & Range_TobeMatched_TotalRows & " | 已尝试组合 : " & Check_Count & " ( " & Int(Check_Count_inTime / (Timer() - LastTimer_DoEvent)) & "/s )"
         LastTimer_DoEvent=Timer()
+        Check_Count_inTime = 0
     End If
 
     X_Range_Sum = Get_Range_ValueSum(X_Range)
@@ -135,6 +273,9 @@ Function Get_Range_TobeMatched(X_Range as Range) as Range
     For Each Test_Area in X_Range.Areas
         For Each Test_Line in Test_Area.Rows
             If Test_Line.Interior.Pattern = xlNone and Application.WorksheetFunction.IsNumber(Test_Line.Cells(Test_Line.Cells.Count)) Then
+
+                Range_TobeMatched_TotalRows = Range_TobeMatched_TotalRows + 1
+
                 If Got_Range is Nothing Then
                     Set Got_Range = Test_Line
                 Else

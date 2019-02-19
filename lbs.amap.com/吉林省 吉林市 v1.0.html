@@ -1,0 +1,82 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no, width=device-width">
+    <title>朝阳区 Prism</title>
+    <style>
+        html,
+        body,
+        #container {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+<div id="container"></div>
+<script src="//webapi.amap.com/maps?v=1.4.12&key=您申请的key值&plugin=Map3D,AMap.DistrictSearch"></script>
+<script>
+    var map = new AMap.Map('container', {
+        viewMode: '3D',
+        pitch: 50,
+        zoom: 5,
+        center: [116.480766, 39.932931]
+    });
+
+    // 设置光照
+    map.AmbientLight = new AMap.Lights.AmbientLight([1, 1, 1], 0.5);
+    map.DirectionLight = new AMap.Lights.DirectionLight([0, 0, 1], [1, 1, 1], 1);
+    map.setMapStyle('amap://styles/darkblue');
+  
+    var object3Dlayer = new AMap.Object3DLayer();
+    map.add(object3Dlayer);
+
+    new AMap.DistrictSearch({
+        subdistrict: 0,   //返回下一级行政区
+        extensions: 'all',  //返回行政区边界坐标组等具体信息
+        level: 'city'  //查询行政级别为 市
+    }).search('吉林市', function (status, result) {
+        var bounds = result.districtList[0].boundaries;
+        var height = 500000;
+        var color = '#ffcc66cc'; // rgba
+        var prism = new AMap.Object3D.Prism({
+            path: bounds,
+            height: height,
+            color: color
+        });
+
+        prism.transparent = true;
+        object3Dlayer.add(prism);
+
+
+    });
+
+      //利用行政区查询获取边界
+      var opts = {
+        subdistrict: 0,
+        extensions: 'all',
+        level: 'city'
+    };
+  
+    var district = new AMap.DistrictSearch(opts);
+    district.search('吉林省', function (status, result) {
+        var bounds = result.districtList[0].boundaries;
+        var height = 200000;
+        var color =  '#ffcc66cc';//rgba
+        var wall = new AMap.Object3D.Wall({
+            path: bounds,
+            height: height,
+            color: color
+        });
+        wall.backOrFront = 'both';
+        wall.transparent = true;
+        object3Dlayer.add(wall);
+    });
+  
+</script>
+</body>
+</html>
