@@ -1,3 +1,22 @@
+"""模块通过Fire实现命令行参数，运行时建议使用长标注 *.py --Name1=Value1 --Name2=Value2
+建议在运行时对默认参数 [ --Server/Name=HTTP_Thread_Trigger  --Server/PortSeed=8400 ] 进行设置 便于链接
+为比避免端口冲突，运行时程序会按 [ port = PortSeed + i*567 ] 进行测试 i = 0 ~ 4，链接时需要进行尝试
+建议通过遍历端口并检测 [ http://127.0.0.1:[port]/Parameter/Server/Name ] 来测试实际端口，如有必要，可以通过随机设定 --Server/Name 来避免错误链接
+
+在VBA中 WinHTTP 和 XMLHttp 在调用均已成功，初步测量响应时间 WinHTTP:2.2ms , XMLHttp:4.2ms
+不要使用 [ localhost ] 进行访问，速度缓慢，整齐的卡在一秒一次，不知道为啥
+XMLHttp 的 GET 没有尝试成功，且每一次send之后需要重新进行open不然会有各种错误
+WinHTTP 的 GET 和 POST 没有发现明显区别
+进行高频连续访问时可能会传输失败， vba中 on errror goto 无法处理 ， WinHTTP 十万次连续访问，在重复使用同一次open的情况下访问成功，平均1.516ms
+
+目前效率最高的方法：open一次，send中追加DoEvents降低错误（成功循环40万次，1.59ms）
+:    Dim WinReq As New WinHttpRequest
+:    WinReq.Open "GET", "http://127.0.0.1:8400/Execute"
+:    For i = 1 To 400000
+:        DoEvents
+:        WinReq.Send
+:    Next"""
+
 from werkzeug.serving import run_simple
 
 from werkzeug.wrappers import Response
@@ -8,11 +27,15 @@ import tqdm
 import fire
 
 import markdown
-def test_Thread(dict_vars):
-    for i in dict_vars:
-        print('{} = {}'.format(repr(i),repr(dict_vars[i])))
-    return "test_Thread Excuted"
-dict_vars={
+
+def test_Thread(dict_parameter):
+    if not('Execution_Count' in dict_parameter): dict_parameter['Execution_Count'] = 0
+    #for i in dict_parameter:
+        #print('{} = {}'.format(repr(i),repr(dict_parameter[i])))
+    dict_parameter['Execution_Count'] = dict_parameter['Execution_Count'] + 1
+    return "test_Thread Executed"
+
+dict_parameter={
     'Server/Name':'HTTP_Thread_Trigger',
     'Server/PortSeed':8400,
     'Server/Port':8400,
@@ -23,11 +46,12 @@ dict_vars={
 }
 
 dict_ResponseText={
-    '未找到对应命令' : 'ERR:No Matched Command 未找到对应命令',
-    '不能多重启动' : 'ERR:Thread is Running Already 不能多重启动'
+    '未找到对应命令' : 'ERR:Command Not Found 未找到对应命令',
+    '不能多重启动' : 'ERR:Thread is Running Already 不能多重启动',
+    '无法读取变量' : 'ERR:Patameter Not Found 未找到/无法读取变量'
 }
 
-html_environ=''
+saved_enivrion={}
 
 def fun_Dict_to_HTML(x_dict,x_title = "Dict_to_HTML"):
     str_FrontEnd = """
@@ -65,7 +89,7 @@ def fun_Dict_to_HTML(x_dict,x_title = "Dict_to_HTML"):
         "SERVER_":{},
         "Server/":{},
         "Thread/":{},
-        "Vars":{}
+        "Parameters":{}
     }
     for i in x_dict:
         for j in x_dict_grouped:
@@ -93,7 +117,7 @@ def fun_Dict_to_HTML(x_dict,x_title = "Dict_to_HTML"):
                 #print(str(i_value).find('\n'))
                 if str(i_value).find('\n')>=0 :
                     format_text=" \n  *  **{}:**  \n ``` {} ``` \n"
-                    i_value = i_value.replace('\n','```   \n   ```')
+                    i_value = i_value.replace('\n','  ```   \n   ```  ')
                 else:
                     format_text=" \n  *  **{}:**  ``` '{}' ```  "
             
@@ -116,53 +140,58 @@ def application(environ, start_response):
     显示当前请求的environ信息，用于调试
     /Environ/Read_Only 为只读模式，不会更新显示结果，即显示上一次访问的相关数值，后面的其他url会直接忽略"""
 
-    global html_environ
+    global saved_enivrion
     #检测 'Read_Only' 只读模式
-    if environ['PATH_INFO'] != '/Environ/Read_Only' : html_environ = fun_Dict_to_HTML(environ,'Environ:WSGI环境变量')
+    if environ['PATH_INFO'] != '/Environ/Read_Only' : saved_enivrion = environ.copy()
     
     if str_Command == 'Environ':
-        response = Response(html_environ, mimetype='text/html')
+        response = Response(saved_enivrion, mimetype='text/html')
         return response(environ, start_response)
 
 
     #调用函数
-    dict_doc['Excute'] = """命令: localhost:[port]/Excute/[Thread/str_Path]?[Thread/str_Value]
-    执行函数 return_string = dict_vars['Thread/Source'](dict_vars)
-    Excute后面的url会存储在如上所示的两个变量中，字符支持有限，中文直接乱码。暂不支持POST方式。"""
-    if str_Command == 'Excute':
-        if dict_vars['Thread/Running'] == True:
+    dict_doc['Execute'] = """命令: localhost:[port]/Execute/[Thread/str_Path]?[Thread/str_Value]
+    执行函数 return_string = dict_parameter['Thread/Source'](dict_parameter)
+    Execute后面的url会存储在如上所示的两个变量中，字符支持有限，中文直接乱码。暂不支持POST方式。"""
+    if str_Command == 'Execute':
+        if dict_parameter['Thread/Running'] == True:
             response = Response(dict_ResponseText['未找到对应命令'], mimetype='text/plain')
             return response(environ, start_response)
-        dict_vars['Thread/str_Path']=str_Path
-        dict_vars['Thread/str_Value']=str_Value
-        return_string = dict_vars['Thread/Source'](dict_vars)
+        dict_parameter['Thread/str_Path']=str_Path
+        dict_parameter['Thread/str_Value']=str_Value
+
+        #开始运行
+        dict_parameter['Thread/Running'] = True
+        return_string = dict_parameter['Thread/Source'](dict_parameter)
+        dict_parameter['Thread/Running'] = False
+
         #print(return_string)
         response = Response(return_string, mimetype='text/plain')
         return response(environ, start_response)
 
 
-    dict_doc['Vars'] = """命令: localhost:[port]/('','Vars')
+    dict_doc['Parameter'] = """命令: localhost:[port]/('','Para','Parameter')
     空白默认命令
-    显示dict_vars内容
+    显示dict_parameter内容
     
-    命令: localhost:[port]/Vars/[Var_Name]
-    如果方法为 POST 则对dict_vars[Var_Name]进行设定，系统会尝试对 POST内容 进行 eval() 处理，文本需要用 ' 括起来
-    必定返回dict_vars[Var_Name]的值"""
-    if str_Command == 'Vars' and str_Path!='':
+    命令: localhost:[port]/('Para','Parameter')/[Parameter_Name]
+    如果方法为 POST 则对dict_parameter[Parameter_Name]进行设定，系统会尝试对 POST内容 进行 eval() 处理，文本需要用 ' 括起来
+    必定返回dict_parameter[Parameter_Name]的值"""
+    if (str_Command == 'Parameter' or str_Command == 'Para') and str_Path!='':
         if environ['REQUEST_METHOD']=='POST':
             print("Got_Post : {}".format(str_Path))
             POST_val = environ['wsgi.input'].read(int(environ['CONTENT_LENGTH'])).decode('utf-8')
             try:
-                dict_vars[str_Path] = eval(POST_val)
+                dict_parameter[str_Path] = eval(POST_val)
             except:
-                dict_vars[str_Path] = POST_val
+                dict_parameter[str_Path] = POST_val
 
-        return_string = str(dict_vars[str_Path])
+        return_string = str(dict_parameter[str_Path])
         response = Response(return_string, mimetype='text/plain')
         return response(environ, start_response)
     
-    if str_Command == '' or str_Command == 'Vars':
-        return_string = fun_Dict_to_HTML(dict_vars,'Vars:变量列表')
+    if str_Command == '' or str_Command == 'Parameter' or str_Command == 'Para':
+        return_string = fun_Dict_to_HTML(dict_parameter,'Parameter:变量列表')
         response = Response(return_string, mimetype='text/html')
         return response(environ, start_response)
 
@@ -170,7 +199,10 @@ def application(environ, start_response):
     dict_doc['Help'] = """命令: localhost:[port]/('Help','H','h')
     显示本帮助信息"""
     #其他说明放这里
-    dict_doc['ResponseText'] = str(dict_ResponseText)
+
+    dict_doc['ELSE:```__doc__```'] = __doc__
+
+    dict_doc['ELSE:```ResponseText```'] = str(dict_ResponseText)
 
     if str_Command == 'H' or str_Command == 'h' or str_Command == 'Help':
         print(dict_doc)
@@ -199,12 +231,17 @@ def get_blankport(PortSeed):
     return -999999
 
 def main(**kwargs):
-    #将命令行参数整合进dict_vars
+    #将命令行参数整合进 dict_parameter
     for i in kwargs:
-        dict_vars[i] = kwargs[i]
+        dict_parameter[i] = kwargs[i]
     #获取可用端口
-    dict_vars['Server/Port'] = get_blankport(dict_vars['Server/PortSeed'])
+    dict_parameter['Server/Port'] = get_blankport(dict_parameter['Server/PortSeed'])
 
-    run_simple('localhost', dict_vars['Server/Port'], application, use_reloader=True , threaded=True)
+    run_simple('localhost', dict_parameter['Server/Port'], application, use_reloader=True , threaded=True)
 
-fire.Fire(main)
+def start_server():
+    print(__doc__)
+    fire.Fire(main)
+
+if __name__ == '__main__':
+    start_server()
