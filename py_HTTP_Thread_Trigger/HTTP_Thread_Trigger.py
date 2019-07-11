@@ -1,6 +1,8 @@
 """模块通过Fire实现命令行参数，运行时建议使用长标注 *.py --Name1=Value1 --Name2=Value2
+将 HTTP_Thread_Trigger.start_server() 放在主模块最后以启动服务
+
 建议在运行时对默认参数 [ --Server/Name=HTTP_Thread_Trigger  --Server/PortSeed=8400 ] 进行设置 便于链接
-为比避免端口冲突，运行时程序会按 [ port = PortSeed + i*567 ] 进行测试 i = 0 ~ 4，链接时需要进行尝试
+为避免端口冲突，运行时程序会按 [ port = PortSeed + i*567 ] 进行测试 i = 0 ~ 4，链接时需要进行尝试。
 建议通过遍历端口并检测 [ http://127.0.0.1:[port]/Parameter/Server/Name ] 来测试实际端口，如有必要，可以通过随机设定 --Server/Name 来避免错误链接
 
 在VBA中 WinHTTP 和 XMLHttp 在调用均已成功，初步测量响应时间 WinHTTP:2.2ms , XMLHttp:4.2ms
