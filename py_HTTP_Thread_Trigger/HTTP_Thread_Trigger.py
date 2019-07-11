@@ -21,10 +21,10 @@ from werkzeug.serving import run_simple
 
 from werkzeug.wrappers import Response
 
-import time
-import socket
-import tqdm
-import fire
+#import time #测试时使用
+#import tqdm #测试时使用
+import socket #用于检测端口
+import fire #实现命令行参数
 
 import markdown
 
