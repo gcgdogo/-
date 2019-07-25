@@ -1,5 +1,10 @@
 import win32com.client
 
+def YM_Cal( YM_input , X_offset ):
+    Months = (YM_input // 100) * 12 + (YM_input % 100)
+    Months = Months + X_offset - 1
+    return (Months // 12) * 100 + (Months % 12) + 1
+
 class DataSet_Origin:
 
     def __init__(self,ado_con,table_name,Key_NameList):
@@ -41,9 +46,19 @@ class DataSet_Origin:
 
     def addnew(self,x_line):
         self.x_line = x_line
+
+        #如果当前行顺序小于写入行，快进
         while self.line_Compare() == 'LoadNext':
             self.line_LoadNext()
+
+        #如果当前行完全被写入行覆盖，直接删除+快进
+        while self.line_Compare() == 'DeleteDirectly':
+            self.line_DeleteOrigin()
+            self.line_LoadNext()
+
         #接着写
+        
+        #计算完成后 递归调用，看看有没有下个情况，直到收到 'AddTemp' 为止
 
 
     def line_Compare(self):
@@ -51,10 +66,21 @@ class DataSet_Origin:
 
         if self.x_line[self.index_dict['员工字段ID']] > self.line[self.index_dict['员工字段ID']]: return 'LoadNext'
         if self.x_line[self.index_dict['员工字段ID']] < self.line[self.index_dict['员工字段ID']]: return 'AddTemp'
+        
+        #如果相邻且相等 则进行计算
+        if self.x_line[self.index_dict['字段内容']] == self.line[self.index_dict['字段内容']]:
+            if YM_Cal(self.x_line[self.index_dict['起始年月']] , -1 ) == self.line[self.index_dict['起始年月']]: return 'Calculate'
+            if YM_Cal(self.x_line[self.index_dict['终止年月']] ,  1 ) == self.line[self.index_dict['终止年月']]: return 'Calculate'
 
         if self.x_line[self.index_dict['起始年月']] > self.line[self.index_dict['终止年月']]: return 'LoadNext'
         if self.x_line[self.index_dict['终止年月']] < self.line[self.index_dict['起始年月']]: return 'AddTemp'
         
+        #如果当前行完全被写入行覆盖，直接删除换下一行
+        if self.x_line[self.index_dict['起始年月']] <= self.line[self.index_dict['起始年月']] \
+            and self.x_line[self.index_dict['终止年月']] >= self.line[self.index_dict['终止年月']]:
+
+            return 'DeleteDirectly'
+
         return 'Calculate'
 
     def line_DeleteOrigin(self):
