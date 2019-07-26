@@ -206,6 +206,9 @@ def application(environ, start_response):
 
     dict_doc['ELSE:```ResponseText```'] = str(dict_ResponseText)
 
+    if dict_parameter['Thread/Source'].__doc__ :
+        dict_doc['ELSE:```Thread/Source.__doc__```'] = dict_parameter['Thread/Source'].__doc__
+
     if str_Command == 'H' or str_Command == 'h' or str_Command == 'Help':
         print(dict_doc)
         return_string = fun_Dict_to_HTML(dict_doc,'Help:帮助文档')

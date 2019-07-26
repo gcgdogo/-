@@ -266,3 +266,39 @@ class DataSet_Overwrite():
             ),
             reverse = False
         )
+
+def main(dict_parameter):
+    """用于在人员类别演算的数据库中合并各个时间段的标注信息
+需要在运行前设置的 dict_parameter ：
+
+<必填>
+FileName : 需要处理的数据库文件名及路径
+
+<选填>
+Table_Origin : 需要进行覆盖的原始表格名称 (默认 = '标注数据整合')
+Table_Overwrite : 用于对Table_Origin进行覆盖的新增数据 (默认 = '标注数据追加')
+
+<生成>
+ID_Recorder : 用来保存已经计算过的 员工字段ID"""
+
+    #变量自检及初始化
+    if not('FileName' in dict_parameter) :
+        return 'Error 变量未设置 FileName : 需要处理的数据库文件名及路径'
+    if not('Table_Origin' in dict_parameter) :
+        dict_parameter['Table_Origin'] = '标注数据整合'
+    if not('Table_Overwrite' in dict_parameter) :
+        dict_parameter['Table_Overwrite'] = '标注数据追加'
+
+    #命令：Connect
+    #建立数据库 Connection
+
+    #建立 ID_Recorder
+
+    #命令：Calculate
+    #链接创建 DataSet_Overwrite
+
+    #链接创建 DataSet_Origin
+
+    #叠加计算
+
+    
