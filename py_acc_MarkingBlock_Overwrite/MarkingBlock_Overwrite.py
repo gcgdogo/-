@@ -30,8 +30,7 @@ class DataSet_Origin:
         self.ado_rs.ActiveConnection = self.ado_con
         self.ado_rs.Source = str_SQL
         self.ado_rs.CursorType = 2
-        self.ado_rs.LockType = 2
-        self.ado_rs.CursorLocation = 2
+        self.ado_rs.LockType = 3
         self.ado_rs.Open()
 
         #读取第一行
@@ -160,7 +159,13 @@ class DataSet_Origin:
 
         #关闭后重新打开连接，省得麻烦
         self.ado_rs.Close()
+
+        self.ado_rs.ActiveConnection = self.ado_con
+        self.ado_rs.Source = self.table_name
+        self.ado_rs.CursorType = 2
+        self.ado_rs.LockType = 3
         self.ado_rs.Open()
+
         for i_line in self.temp_LinesToWrite :
             self.ado_rs.AddNew(self.Key_NameList , i_line)
             self.ado_rs.Update()
@@ -172,16 +177,92 @@ class DataSet_Origin:
 class ID_Recorder():
 
     def __init__(self,Key_NameList):
-        self.dict_员工ID = {}
-        self.dict_字段ID = {}
+        self.dict_员工ID = {'':0} # 初始带个零
+        self.dict_字段ID = {'':0} # 初始带个零
 
-    
+        self.loc_员工编号 = Key_NameList.index('员工编号')
+        self.loc_字段名称 = Key_NameList.index('字段名称')
+        self.loc_员工字段ID = Key_NameList.index('员工字段ID')
+
+    #convert 对 x_line 直接操作，没有返回值
+    def convert(self , x_line):
+        #先把读取的 员工字段ID 转换一下
+        try:
+            x_line[self.loc_员工字段ID] = int(x_line[self.loc_员工字段ID])
+        except:
+            x_line[self.loc_员工字段ID] = 0
+        
+        #比较计算 员工编号ID
+        if x_line[self.loc_员工编号] in self.dict_员工ID :
+            if x_line[self.loc_员工字段ID] > 0:
+                if self.dict_员工ID[x_line[self.loc_员工编号]] != x_line[self.loc_员工字段ID] // 10000 :
+                    print('ID 不一致警告 <员工编号>{} : <new>{} != <ori>{}').format(
+                        x_line[self.loc_员工编号],
+                        x_line[self.loc_员工字段ID] // 10000 , 
+                        self.dict_员工ID[x_line[self.loc_员工编号]]
+                    )
+        else:
+            if x_line[self.loc_员工字段ID] > 0: # 如果设定不冲突就进行设定
+                self.dict_员工ID[x_line[self.loc_员工编号]] = x_line[self.loc_员工字段ID] // 10000
+            else:
+                self.dict_员工ID[x_line[self.loc_员工编号]] = dict_员工ID.items().max() + 1
+
+        #比较计算 字段名称ID
+        if x_line[self.loc_字段名称] in self.dict_字段ID :
+            if x_line[self.loc_员工字段ID] > 0:
+                if self.dict_字段ID[x_line[self.loc_字段名称]] != x_line[self.loc_员工字段ID] % 10000 :
+                    print('ID 不一致警告 <字段名称>{} : <new>{} != <ori>{}').format(
+                        x_line[self.loc_字段名称],
+                        x_line[self.loc_员工字段ID] % 10000 , 
+                        self.dict_字段ID[x_line[self.loc_字段名称]]
+                    )
+        else:
+            if x_line[self.loc_员工字段ID] > 0: # 如果设定不冲突就进行设定
+                self.dict_字段ID[x_line[self.loc_字段名称]] = x_line[self.loc_员工字段ID] % 10000
+            else:
+                self.dict_字段ID[x_line[self.loc_字段名称]] = dict_字段ID.items().max() + 1
+
+        #最后覆盖掉 员工字段ID
+        x_line[self.loc_员工字段ID] = self.dict_员工ID[x_line[self.loc_员工编号]] * 10000 + self.dict_字段ID[x_line[self.loc_字段名称]] 
 
 
 class DataSet_Overwrite():
 
-    def __init__(self,ado_con,table_name,Key_NameList):
-        pass
-    
-    def 
+    def __init__(self , ado_con , table_name , Key_NameList , ID_Recorder):
 
+        self.ado_con = ado_con
+        self.table_name = table_name
+        self.Key_NameList = Key_NameList
+        self.ID_Recorder = ID_Recorder
+
+        str_Keys = ' , '.join(Key_NameList)
+        str_SQL = 'select {} from {} order by 员工字段ID , 起始年月'.format(str_Keys,self.table_name)
+
+        self.ado_rs = win32com.client.Dispatch(r'ADODB.Recordset')
+        self.ado_rs.ActiveConnection = self.ado_con
+        self.ado_rs.Source = str_SQL
+        self.ado_rs.CursorType = 2
+        self.ado_rs.LockType = 3
+        self.ado_rs.Open()
+
+        self.lines = []
+        self.ado_rs.MoveFirst()
+        while self.ado_rs.EOF == False:
+            read_line=[]
+            for i in self.Key_NameList:
+                read_line.append(self.ado_rs.Fields.Item(i).Value)  #使用ado.field.Item(x).Value进行读取
+
+            self.ID_Recorder.convert(read_line) #读取转换 员工字段ID
+
+            self.lines.append(read_line)
+            self.ado_rs.MoveNext()
+
+        # 开始排序，目标字段整合成元组之后再排序
+        self.lines.sort(
+            key = lambda x : (
+                x[self.Key_NameList.index('员工字段ID')],
+                x[self.Key_NameList.index('起始年月')],
+                x[self.Key_NameList.index('终止年月')]
+            ),
+            reverse = False
+        )
