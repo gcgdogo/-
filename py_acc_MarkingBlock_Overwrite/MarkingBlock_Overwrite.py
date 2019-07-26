@@ -205,7 +205,7 @@ class ID_Recorder():
             if x_line[self.loc_员工字段ID] > 0: # 如果设定不冲突就进行设定
                 self.dict_员工ID[x_line[self.loc_员工编号]] = x_line[self.loc_员工字段ID] // 10000
             else:
-                self.dict_员工ID[x_line[self.loc_员工编号]] = dict_员工ID.items().max() + 1
+                self.dict_员工ID[x_line[self.loc_员工编号]] = max(self.dict_员工ID.items()) + 1
 
         #比较计算 字段名称ID
         if x_line[self.loc_字段名称] in self.dict_字段ID :
@@ -220,7 +220,7 @@ class ID_Recorder():
             if x_line[self.loc_员工字段ID] > 0: # 如果设定不冲突就进行设定
                 self.dict_字段ID[x_line[self.loc_字段名称]] = x_line[self.loc_员工字段ID] % 10000
             else:
-                self.dict_字段ID[x_line[self.loc_字段名称]] = dict_字段ID.items().max() + 1
+                self.dict_字段ID[x_line[self.loc_字段名称]] = max(self.dict_字段ID.items()) + 1
 
         #最后覆盖掉 员工字段ID
         x_line[self.loc_员工字段ID] = self.dict_员工ID[x_line[self.loc_员工编号]] * 10000 + self.dict_字段ID[x_line[self.loc_字段名称]] 
