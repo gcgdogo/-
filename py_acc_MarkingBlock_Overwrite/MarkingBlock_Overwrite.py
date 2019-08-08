@@ -44,9 +44,16 @@ class DataSet_Origin:
         for i in range(len(Key_NameList)):
             self.index_dict[Key_NameList[i]] = i
         pass
+        
+        #记录执行情况
+        self.count_Input = 0
+        self.count_Delete = 0
+        self.count_AddTemp = 0
+        self.count_Write = 0
 
     def addnew(self,x_line):
         self.x_line = x_line
+        self.count_Input = self.count_Input + 1
 
         #如果当前行顺序小于写入行，快进
         while self.line_Compare() == 'LoadNext':
@@ -99,8 +106,8 @@ class DataSet_Origin:
         
         #如果相邻且相等 则进行计算
         if self.x_line[self.index_dict['字段内容']] == self.line[self.index_dict['字段内容']]:
-            if YM_Cal(self.x_line[self.index_dict['起始年月']] , -1 ) == self.line[self.index_dict['起始年月']]: return 'Calculate'
-            if YM_Cal(self.x_line[self.index_dict['终止年月']] ,  1 ) == self.line[self.index_dict['终止年月']]: return 'Calculate'
+            if YM_Cal(self.x_line[self.index_dict['起始年月']] , -1 ) == self.line[self.index_dict['终止年月']]: return 'Calculate'
+            if YM_Cal(self.x_line[self.index_dict['终止年月']] ,  1 ) == self.line[self.index_dict['起始年月']]: return 'Calculate'
 
         if self.x_line[self.index_dict['起始年月']] > self.line[self.index_dict['终止年月']]: return 'LoadNext'
         if self.x_line[self.index_dict['终止年月']] < self.line[self.index_dict['起始年月']]: return 'AddTemp'
@@ -120,6 +127,7 @@ class DataSet_Origin:
         
         self.ado_rs.Delete()
         self.line_Edited = True
+        self.count_Delete = self.count_Delete + 1
     
     def line_LoadNext(self , LoadFirstLine = False):
 
@@ -141,6 +149,8 @@ class DataSet_Origin:
     
     def temp_AddLine(self,add_line):
 
+        self.count_AddTemp = self.count_AddTemp + 1
+
         #如果符合条件就合并到最后一行里
         #首先得至少有一行吧
         if self.temp_LinesToWrite != [] :
@@ -152,6 +162,7 @@ class DataSet_Origin:
                     if YM_Cal(self.temp_LinesToWrite[-1][self.index_dict['终止年月']] , 1 ) == add_line[self.index_dict['起始年月']]:
                         #如果都满足  直接延长最后一行
                         self.temp_LinesToWrite[-1][self.index_dict['终止年月']] = add_line[self.index_dict['终止年月']]
+                        return #直接返回
 
         self.temp_LinesToWrite.append(add_line)
 
@@ -165,6 +176,8 @@ class DataSet_Origin:
         self.ado_rs.CursorType = 2
         self.ado_rs.LockType = 3
         self.ado_rs.Open()
+
+        self.count_Write = len(self.temp_LinesToWrite)
 
         for i_line in self.temp_LinesToWrite :
             self.ado_rs.AddNew(self.Key_NameList , i_line)
@@ -269,16 +282,20 @@ class DataSet_Overwrite():
 
 def main(dict_parameter):
     """用于在人员类别演算的数据库中合并各个时间段的标注信息
+操作命令[Thread/str_Path]：
+    Connect
+    Calculate
 需要在运行前设置的 dict_parameter ：
-
 <必填>
 FileName : 需要处理的数据库文件名及路径
 
 <选填>
 Table_Origin : 需要进行覆盖的原始表格名称 (默认 = '标注数据整合')
 Table_Overwrite : 用于对Table_Origin进行覆盖的新增数据 (默认 = '标注数据追加')
+Key_NameList : 需要进行组合的字段列表(默认 = ['员工编号' , '姓名' , '起始年月' , '终止年月' , '字段名称' , '字段内容' , '员工字段ID'])
 
 <生成>
+ADO_Connection : 用来保存数据库连接
 ID_Recorder : 用来保存已经计算过的 员工字段ID"""
 
     #变量自检及初始化
@@ -288,17 +305,54 @@ ID_Recorder : 用来保存已经计算过的 员工字段ID"""
         dict_parameter['Table_Origin'] = '标注数据整合'
     if not('Table_Overwrite' in dict_parameter) :
         dict_parameter['Table_Overwrite'] = '标注数据追加'
+    if not('Key_NameList' in dict_parameter) :
+        dict_parameter['Key_NameList'] = ['员工编号' , '姓名' , '起始年月' , '终止年月' , '字段名称' , '字段内容' , '员工字段ID']
 
+    if not('Thread/str_Path' in dict_parameter):
+        print('空白调用，直接结束')
+        return
     #命令：Connect
-    #建立数据库 Connection
+    if dict_parameter['Thread/str_Path'] == 'Connect' :
 
-    #建立 ID_Recorder
+        #建立数据库 Connection
+        dict_parameter['ADO_Connection'] = win32com.client.Dispatch(r'ADODB.Connection')
+        dict_parameter['ADO_Connection'].Open(r'Provider=Microsoft.ACE.OLEDB.12.0;Data Source={}'.format(dict_parameter['FileName']))
+
+        #建立 ID_Recorder
+        dict_parameter['ID_Recorder'] = ID_Recorder(dict_parameter['Key_NameList'])
+
+        return '成功连接数据库文件[{}]'.format(dict_parameter['FileName'])
 
     #命令：Calculate
-    #链接创建 DataSet_Overwrite
+    if dict_parameter['Thread/str_Path'] == 'Calculate' :
 
+    #链接创建 DataSet_Overwrite
+        DS_Overwrite = DataSet_Overwrite(
+            ado_con = dict_parameter['ADO_Connection'],
+            table_name = dict_parameter['Table_Overwrite'],
+            Key_NameList = dict_parameter['Key_NameList'],
+            ID_Recorder = dict_parameter['ID_Recorder']
+        )
     #链接创建 DataSet_Origin
+        DS_Origin = DataSet_Origin(
+            ado_con = dict_parameter['ADO_Connection'],
+            table_name = dict_parameter['Table_Origin'],
+            Key_NameList = dict_parameter['Key_NameList']
+        )
 
     #叠加计算
+        #遍历各行
+        for i_line in DS_Overwrite.lines:
+            DS_Origin.addnew(i_line)
+        #最后写入
+        DS_Origin.temp_FinishAndWrite()
 
+        return '数据整合完毕 Input = {} Delete = {} AddTemp = {} Write = {}'.format(
+            DS_Origin.count_Input,
+            DS_Origin.count_Delete,
+            DS_Origin.count_AddTemp,
+            DS_Origin.count_Write
+        )
     
+    return '无效调用，直接结束'
+
