@@ -1,4 +1,5 @@
 import win32com.client
+import HTTP_Thread_Trigger
 
 def YM_Cal( YM_input , X_offset ):
     Months = (YM_input // 100) * 12 + (YM_input % 100)
@@ -297,6 +298,7 @@ Key_NameList : 需要进行组合的字段列表(默认 = ['员工编号' , '姓
 <生成>
 ADO_Connection : 用来保存数据库连接
 ID_Recorder : 用来保存已经计算过的 员工字段ID"""
+    win32com.client.pythoncom.CoInitialize() #看看这么能不能解决多线程的问题
 
     #变量自检及初始化
     if not('FileName' in dict_parameter) :
@@ -320,7 +322,7 @@ ID_Recorder : 用来保存已经计算过的 员工字段ID"""
 
         #建立 ID_Recorder
         dict_parameter['ID_Recorder'] = ID_Recorder(dict_parameter['Key_NameList'])
-
+ 
         return '成功连接数据库文件[{}]'.format(dict_parameter['FileName'])
 
     #命令：Calculate
@@ -355,4 +357,9 @@ ID_Recorder : 用来保存已经计算过的 员工字段ID"""
         )
     
     return '无效调用，直接结束'
+
+if __name__ == '__main__':
+
+    HTTP_Thread_Trigger.dict_parameter['Thread/Source'] = main
+    HTTP_Thread_Trigger.start_server()
 
