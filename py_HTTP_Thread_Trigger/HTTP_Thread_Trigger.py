@@ -147,7 +147,8 @@ def application(environ, start_response):
     if environ['PATH_INFO'] != '/Environ/Read_Only' : saved_enivrion = environ.copy()
     
     if str_Command == 'Environ':
-        response = Response(saved_enivrion, mimetype='text/html')
+        return_string = fun_Dict_to_HTML(saved_enivrion,"Enivron:请求信息")
+        response = Response( return_string, mimetype='text/html')
         return response(environ, start_response)
 
 

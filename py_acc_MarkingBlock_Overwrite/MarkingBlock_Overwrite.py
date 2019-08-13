@@ -1,5 +1,6 @@
 import win32com.client
 import HTTP_Thread_Trigger
+import numpy
 
 def YM_Cal( YM_input , X_offset ):
     Months = (YM_input // 100) * 12 + (YM_input % 100)
@@ -18,6 +19,8 @@ class DataSet_Origin:
         #保存表名
         self.table_name = table_name
 
+        self.table_delete_name = 'MarkingBlock_待删除行号'
+
         #标准字段写入读取顺序
         self.Key_NameList = Key_NameList
 
@@ -30,15 +33,28 @@ class DataSet_Origin:
         self.ado_rs = win32com.client.Dispatch(r'ADODB.Recordset')
         self.ado_rs.ActiveConnection = self.ado_con
         self.ado_rs.Source = str_SQL
-        self.ado_rs.CursorType = 2
+        self.ado_rs.CursorType = 3 #静态游标
         self.ado_rs.LockType = 3
         self.ado_rs.Open()
 
+        #Delete之后无法直接接 update 且效率慢，改为存储行号到单独的表里统一删除
+        self.ado_con.Execute(
+            'DELETE * FROM {0};'.format(self.table_delete_name)
+        )  #先把待删除列表清空
+
+        self.ado_rs_delete = win32com.client.Dispatch(r'ADODB.Recordset')
+        self.ado_rs_delete.ActiveConnection = self.ado_con
+        self.ado_rs_delete.Source = 'select {} from {}'.format('ID',self.table_delete_name)
+        self.ado_rs_delete.CursorType = 2
+        self.ado_rs_delete.LockType = 3
+        self.ado_rs_delete.Open()
+
+
         #读取第一行
         self.line = [] #空行用空列表[]表示
-        self.line_LoadNext(LoadFirstLine = True)
-
         self.line_Edited = False
+
+        self.line_LoadNext(LoadFirstLine = True)
 
         #保存顺序位置
         self.index_dict = {}
@@ -53,6 +69,7 @@ class DataSet_Origin:
         self.count_Write = 0
 
     def addnew(self,x_line):
+        #print('x_line' + repr(x_line) + repr(self.line))
         self.x_line = x_line
         self.count_Input = self.count_Input + 1
 
@@ -66,7 +83,7 @@ class DataSet_Origin:
             self.line_LoadNext()
 
         if self.line_Compare() == 'AddTemp':
-            self.temp_AddLine(self.line)
+            self.temp_AddLine(self.x_line)
             return
         
         if self.line_Compare() == 'Calculate':
@@ -77,7 +94,7 @@ class DataSet_Origin:
 
             #如果前部有剩余，截取前半截直接写入
             if self.x_line[self.index_dict['起始年月']] > self.line[self.index_dict['起始年月']]:
-                line_Part_A = self.line.copy
+                line_Part_A = self.line.copy()
                 line_Part_A[self.index_dict['终止年月']] = min(
                     line_Part_A[self.index_dict['终止年月']],
                     YM_Cal(self.x_line[self.index_dict['起始年月']] , -1 )
@@ -87,7 +104,7 @@ class DataSet_Origin:
 
             #如果后部有剩余,截取后半截保留
             if self.x_line[self.index_dict['终止年月']] < self.line[self.index_dict['终止年月']]:
-                line_Part_B = self.line.copy
+                line_Part_B = self.line.copy()
                 line_Part_B[self.index_dict['起始年月']] = max(
                     line_Part_B[self.index_dict['起始年月']],
                     YM_Cal(self.x_line[self.index_dict['终止年月']] ,  1 )
@@ -95,7 +112,10 @@ class DataSet_Origin:
 
                 self.line = line_Part_B #保留数据
 
-        #计算完成后 递归调用，看看有没有下个情况，直到收到 'AddTemp' 为止
+                self.temp_AddLine(self.x_line) #后面都有剩余了，这行可以写进去了
+                return
+
+        #计算完成后 递归调用，看看有没有下个情况，直到收到 'AddTemp' 或 'Calculate且后面有节余'为止
         self.addnew(x_line)
 
 
@@ -126,7 +146,9 @@ class DataSet_Origin:
         
         if self.line_Edited == True: return
         
-        self.ado_rs.Delete()
+        self.ado_rs_delete.AddNew(['ID'],self.line[0:1]) #写入第一个值，就是ID
+
+        #self.ado_rs.Delete()
         self.line_Edited = True
         self.count_Delete = self.count_Delete + 1
     
@@ -138,25 +160,32 @@ class DataSet_Origin:
         
         #line初始化[]
         self.line = []
+        try:
+            if LoadFirstLine == True: self.ado_rs.MoveFirst()
+            if self.ado_rs.EOF == True: return  #EOF则跳出
+            if LoadFirstLine == False: self.ado_rs.MoveNext()
 
-        if LoadFirstLine == True: self.ado_rs.MoveFirst()
-        if self.ado_rs.EOF == True: return  #EOF则跳出
-        if LoadFirstLine == False: self.ado_rs.MoveNext()
+            for i in self.Key_NameList:
+                self.line.append(self.ado_rs.Fields.Item(i).Value)  #使用ado.field.Item(x).Value进行读取
 
-        for i in self.Key_NameList:
-            self.line.append(self.ado_rs.Fields.Item(i).Value)  #使用ado.field.Item(x).Value进行读取
-
-        self.line_Edited = False
-    
+            self.line_Edited = False
+        except:
+            self.line = []
     def temp_AddLine(self,add_line):
 
         self.count_AddTemp = self.count_AddTemp + 1
 
         #如果符合条件就合并到最后一行里
         #首先得至少有一行吧
-        if self.temp_LinesToWrite != [] :
+        if len(self.temp_LinesToWrite) > 0 :
+            #print(self.temp_LinesToWrite[-1])
             #检测最后一行ID相等
             if self.temp_LinesToWrite[-1][self.index_dict['员工字段ID']] == add_line[self.index_dict['员工字段ID']]:
+                #如果后加的年月小于前一行，赶紧报错啊！！！
+                if self.temp_LinesToWrite[-1][self.index_dict['终止年月']] >= add_line[self.index_dict['起始年月']]:
+                    print("后加的年月小于前一行，赶紧报错啊！！！")
+                    print(0/0/0/0/0/0/0/0/0/0/0/0) #直接报错就得了
+
                 #检测最后一行是否相等
                 if self.temp_LinesToWrite[-1][self.index_dict['字段内容']] == add_line[self.index_dict['字段内容']]:
                     #检测是否相邻
@@ -172,6 +201,10 @@ class DataSet_Origin:
         #关闭后重新打开连接，省得麻烦
         self.ado_rs.Close()
 
+        self.ado_con.Execute(
+            'DELETE {0}.* FROM {0} INNER JOIN {1} ON {0}.ID = {1}.ID;'.format(self.table_name,self.table_delete_name)
+        )
+
         self.ado_rs.ActiveConnection = self.ado_con
         self.ado_rs.Source = self.table_name
         self.ado_rs.CursorType = 2
@@ -181,7 +214,7 @@ class DataSet_Origin:
         self.count_Write = len(self.temp_LinesToWrite)
 
         for i_line in self.temp_LinesToWrite :
-            self.ado_rs.AddNew(self.Key_NameList , i_line)
+            self.ado_rs.AddNew(self.Key_NameList[1:] , i_line[1:]) #第一个位置是行号，不参与导入
             self.ado_rs.Update()
         
         self.ado_rs.Close() #结束，关闭
@@ -204,6 +237,7 @@ class ID_Recorder():
         try:
             x_line[self.loc_员工字段ID] = int(x_line[self.loc_员工字段ID])
         except:
+            #print( x_line)
             x_line[self.loc_员工字段ID] = 0
         
         #比较计算 员工编号ID
@@ -219,7 +253,7 @@ class ID_Recorder():
             if x_line[self.loc_员工字段ID] > 0: # 如果设定不冲突就进行设定
                 self.dict_员工ID[x_line[self.loc_员工编号]] = x_line[self.loc_员工字段ID] // 10000
             else:
-                self.dict_员工ID[x_line[self.loc_员工编号]] = max(self.dict_员工ID.items()) + 1
+                self.dict_员工ID[x_line[self.loc_员工编号]] = max(self.dict_员工ID.values()) + 1
 
         #比较计算 字段名称ID
         if x_line[self.loc_字段名称] in self.dict_字段ID :
@@ -234,7 +268,7 @@ class ID_Recorder():
             if x_line[self.loc_员工字段ID] > 0: # 如果设定不冲突就进行设定
                 self.dict_字段ID[x_line[self.loc_字段名称]] = x_line[self.loc_员工字段ID] % 10000
             else:
-                self.dict_字段ID[x_line[self.loc_字段名称]] = max(self.dict_字段ID.items()) + 1
+                self.dict_字段ID[x_line[self.loc_字段名称]] = max(self.dict_字段ID.values()) + 1
 
         #最后覆盖掉 员工字段ID
         x_line[self.loc_员工字段ID] = self.dict_员工ID[x_line[self.loc_员工编号]] * 10000 + self.dict_字段ID[x_line[self.loc_字段名称]] 
@@ -244,6 +278,7 @@ class DataSet_Overwrite():
 
     def __init__(self , ado_con , table_name , Key_NameList , ID_Recorder):
 
+        print('DataSet_Overwrite 初始化')
         self.ado_con = ado_con
         self.table_name = table_name
         self.Key_NameList = Key_NameList
@@ -255,22 +290,27 @@ class DataSet_Overwrite():
         self.ado_rs = win32com.client.Dispatch(r'ADODB.Recordset')
         self.ado_rs.ActiveConnection = self.ado_con
         self.ado_rs.Source = str_SQL
-        self.ado_rs.CursorType = 2
-        self.ado_rs.LockType = 3
+        self.ado_rs.CursorType = 3 #静态游标
+        self.ado_rs.LockType = 1 #ReadOnly
         self.ado_rs.Open()
-
-        self.lines = []
+        print('DataSet_Overwrite.lines 读取')
         self.ado_rs.MoveFirst()
-        while self.ado_rs.EOF == False:
-            read_line=[]
-            for i in self.Key_NameList:
-                read_line.append(self.ado_rs.Fields.Item(i).Value)  #使用ado.field.Item(x).Value进行读取
+        self.lines = numpy.array(self.ado_rs.GetRows()).T.tolist()  #直接一次性读取，用numpy进行转置和计算
+        #print(self.lines)
+        for read_line in self.lines:
+            self.ID_Recorder.convert(read_line)
+        # while self.ado_rs.EOF == False:
+        #     read_line=[]
+        #     for i in self.Key_NameList:
+        #         read_line.append(self.ado_rs.Fields.Item(i).Value)  #使用ado.field.Item(x).Value进行读取
 
-            self.ID_Recorder.convert(read_line) #读取转换 员工字段ID
+        #     self.ID_Recorder.convert(read_line) #读取转换 员工字段ID
 
-            self.lines.append(read_line)
-            self.ado_rs.MoveNext()
+        #     self.lines.append(read_line)
+        #     self.ado_rs.MoveNext()
 
+
+        print('DataSet_Overwrite.lines 排序')
         # 开始排序，目标字段整合成元组之后再排序
         self.lines.sort(
             key = lambda x : (
@@ -293,12 +333,11 @@ FileName : 需要处理的数据库文件名及路径
 <选填>
 Table_Origin : 需要进行覆盖的原始表格名称 (默认 = '标注数据整合')
 Table_Overwrite : 用于对Table_Origin进行覆盖的新增数据 (默认 = '标注数据追加')
-Key_NameList : 需要进行组合的字段列表(默认 = ['员工编号' , '姓名' , '起始年月' , '终止年月' , '字段名称' , '字段内容' , '员工字段ID'])
+Key_NameList : 需要进行组合的字段列表(默认 =  ['ID' , '员工编号' , '姓名' , '起始年月' , '终止年月' , '字段名称' , '字段内容' , '员工字段ID']) 第一个用于存储行号，不参与导入
 
 <生成>
 ADO_Connection : 用来保存数据库连接
 ID_Recorder : 用来保存已经计算过的 员工字段ID"""
-    win32com.client.pythoncom.CoInitialize() #看看这么能不能解决多线程的问题
 
     #变量自检及初始化
     if not('FileName' in dict_parameter) :
@@ -308,22 +347,28 @@ ID_Recorder : 用来保存已经计算过的 员工字段ID"""
     if not('Table_Overwrite' in dict_parameter) :
         dict_parameter['Table_Overwrite'] = '标注数据追加'
     if not('Key_NameList' in dict_parameter) :
-        dict_parameter['Key_NameList'] = ['员工编号' , '姓名' , '起始年月' , '终止年月' , '字段名称' , '字段内容' , '员工字段ID']
+        dict_parameter['Key_NameList'] = ['ID' , '员工编号' , '姓名' , '起始年月' , '终止年月' , '字段名称' , '字段内容' , '员工字段ID']
 
     if not('Thread/str_Path' in dict_parameter):
-        print('空白调用，直接结束')
+        print('无效调用，直接结束')
         return
+
+    win32com.client.pythoncom.CoInitialize() #看看这么能不能解决多线程的问题
+
+    #默认返回字符串
+    Return_String = '未找到对应命令，直接结束'
+
     #命令：Connect
     if dict_parameter['Thread/str_Path'] == 'Connect' :
 
         #建立数据库 Connection
         dict_parameter['ADO_Connection'] = win32com.client.Dispatch(r'ADODB.Connection')
-        dict_parameter['ADO_Connection'].Open(r'Provider=Microsoft.ACE.OLEDB.12.0;Data Source={}'.format(dict_parameter['FileName']))
+        dict_parameter['ADO_Connection'].Open(r'Provider=Microsoft.ACE.OLEDB.12.0;Data Source={};Jet OLEDB:Max Locks Per File=20000'.format(dict_parameter['FileName']))
 
         #建立 ID_Recorder
         dict_parameter['ID_Recorder'] = ID_Recorder(dict_parameter['Key_NameList'])
  
-        return '成功连接数据库文件[{}]'.format(dict_parameter['FileName'])
+        Return_String = '成功连接数据库文件[{}]'.format(dict_parameter['FileName'])
 
     #命令：Calculate
     if dict_parameter['Thread/str_Path'] == 'Calculate' :
@@ -349,14 +394,16 @@ ID_Recorder : 用来保存已经计算过的 员工字段ID"""
         #最后写入
         DS_Origin.temp_FinishAndWrite()
 
-        return '数据整合完毕 Input = {} Delete = {} AddTemp = {} Write = {}'.format(
+        Return_String = '数据整合完毕 Input = {} Delete = {} AddTemp = {} Write = {}'.format(
             DS_Origin.count_Input,
             DS_Origin.count_Delete,
             DS_Origin.count_AddTemp,
             DS_Origin.count_Write
         )
     
-    return '无效调用，直接结束'
+    win32com.client.pythoncom.CoUninitialize() #释放多线程
+
+    return Return_String
 
 if __name__ == '__main__':
 

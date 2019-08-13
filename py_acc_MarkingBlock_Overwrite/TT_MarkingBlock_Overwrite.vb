@@ -25,9 +25,9 @@ End Function
 
 Private Function TT_Server_Initalize() 
 '初始化
-    Request_Post "/Parameter/FileName",Application.CurrentProject.FullName
-    Request_Post "/Parameter/Table_Origin","标注数据整合_python"
-    Request_Post "/Parameter/Table_Overwrite","标注数据追加"
+    Request_Post "/Parameter/FileName", "'" + Application.CurrentProject.FullName + "'"
+    Request_Post "/Parameter/Table_Origin","'标注数据整合_python'"
+    Request_Post "/Parameter/Table_Overwrite","'标注数据追加'"
 
     Request_Get "/Execute/Connect" '链接数据库
 End Function
@@ -62,7 +62,10 @@ Function Request_Get(URL_append as String)
     Static WinReq As WinHttpRequest
     Static WinReq_URL As String
     if WinReq_URL = "" then set WinReq = New WinHttpRequest
-    if WinReq_URL <> TT_URL then WinReq.Open "GET", TT_URL + URL_append  '直接调用已经设置好的URL
+    if WinReq_URL <> TT_URL + URL_append then
+        WinReq.Open "GET", TT_URL + URL_append 'URL变化就重新OPEN一下
+        WinReq_URL = TT_URL + URL_append
+    end if
     WinReq.Send
     Request_Get = WinReq.ResponseText
     Exit Function
@@ -75,7 +78,10 @@ Function Request_Post(URL_append as String , str_Message as String)
     Static WinReq As WinHttpRequest
     Static WinReq_URL As String
     if WinReq_URL = "" then set WinReq = New WinHttpRequest
-    if WinReq_URL <> TT_URL then WinReq.Open "POST", TT_URL + URL_append  '直接调用已经设置好的URL
+    if WinReq_URL <> TT_URL + URL_append then
+        WinReq.Open "POST", TT_URL + URL_append 'URL变化就重新OPEN一下
+        WinReq_URL = TT_URL + URL_append
+    end if
     WinReq.Send str_Message
     Request_Post = WinReq.ResponseText
     Exit Function
