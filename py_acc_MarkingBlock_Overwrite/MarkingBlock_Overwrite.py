@@ -34,8 +34,16 @@ class DataSet_Origin:
         self.ado_rs.ActiveConnection = self.ado_con
         self.ado_rs.Source = str_SQL
         self.ado_rs.CursorType = 3 #静态游标
-        self.ado_rs.LockType = 3
+        self.ado_rs.LockType = 1 #只读
         self.ado_rs.Open()
+
+        try:
+            self.ado_rs.MoveFirst()
+            self.Ori_lines = numpy.array(self.ado_rs.GetRows()).T.tolist()  #直接一次性读取，用numpy进行转置和计算
+        except:
+            self.Ori_lines = []
+        self.Ori_lines_finger = 0
+        self.ado_rs.Close()  #读取完就直接关闭吧
 
         #Delete之后无法直接接 update 且效率慢，改为存储行号到单独的表里统一删除
         self.ado_con.Execute(
@@ -163,20 +171,15 @@ class DataSet_Origin:
         if self.line_NeedToWrite == True:
             self.temp_AddLine(self.line)
         
-        #line初始化[]
-        self.line = []
-        try:
-            if LoadFirstLine == True: self.ado_rs.MoveFirst()
-            if self.ado_rs.EOF == True: return  #EOF则跳出
-            if LoadFirstLine == False: self.ado_rs.MoveNext()
-
-            for i in self.Key_NameList:
-                self.line.append(self.ado_rs.Fields.Item(i).Value)  #使用ado.field.Item(x).Value进行读取
-
-            self.line_NeedToWrite = False
-            self.line_Deleted = False
-        except:
+        if self.Ori_lines_finger < len(self.Ori_lines):  #直接从已读取的各行中截取一行就行
+            self.line = self.Ori_lines[self.Ori_lines_finger]
+            self.Ori_lines_finger = self.Ori_lines_finger + 1
+        else:
             self.line = []
+
+        self.line_Deleted = False  #恢复编辑状态
+        self.line_NeedToWrite = False
+
     def temp_AddLine(self,add_line):
 
         self.count_AddTemp = self.count_AddTemp + 1
@@ -203,10 +206,7 @@ class DataSet_Origin:
         self.temp_LinesToWrite.append(add_line)
 
     def temp_FinishAndWrite(self):
-
-        #关闭后重新打开连接，省得麻烦
-        self.ado_rs.Close()
-
+        #一次性删除
         self.ado_con.Execute(
             'DELETE {0}.* FROM {0} INNER JOIN {1} ON {0}.ID = {1}.ID;'.format(self.table_name,self.table_delete_name)
         )
@@ -284,7 +284,7 @@ class DataSet_Overwrite():
 
     def __init__(self , ado_con , table_name , Key_NameList , ID_Recorder):
 
-        print('DataSet_Overwrite 初始化')
+        #print('DataSet_Overwrite 初始化')
         self.ado_con = ado_con
         self.table_name = table_name
         self.Key_NameList = Key_NameList
@@ -299,9 +299,14 @@ class DataSet_Overwrite():
         self.ado_rs.CursorType = 3 #静态游标
         self.ado_rs.LockType = 1 #ReadOnly
         self.ado_rs.Open()
-        print('DataSet_Overwrite.lines 读取')
-        self.ado_rs.MoveFirst()
-        self.lines = numpy.array(self.ado_rs.GetRows()).T.tolist()  #直接一次性读取，用numpy进行转置和计算
+        #print('DataSet_Overwrite.lines 读取')
+
+        try:
+            self.ado_rs.MoveFirst()
+            self.lines = numpy.array(self.ado_rs.GetRows()).T.tolist()  #直接一次性读取，用numpy进行转置和计算
+        except:
+            self.lines = []
+
         #print(self.lines)
         for read_line in self.lines:
             self.ID_Recorder.convert(read_line)
