@@ -52,7 +52,8 @@ class DataSet_Origin:
 
         #读取第一行
         self.line = [] #空行用空列表[]表示
-        self.line_Edited = False
+        self.line_NeedToWrite = False
+        self.line_Deleted = False
 
         self.line_LoadNext(LoadFirstLine = True)
 
@@ -80,6 +81,7 @@ class DataSet_Origin:
         #如果当前行完全被写入行覆盖，直接删除+快进
         while self.line_Compare() == 'DeleteDirectly':
             self.line_DeleteOrigin()
+            self.line_NeedToWrite = False  ######得在删除之后把编辑标记解除掉，要不然换下一行的时候又给加进去了
             self.line_LoadNext()
 
         if self.line_Compare() == 'AddTemp':
@@ -101,6 +103,7 @@ class DataSet_Origin:
                 ) #重新取一遍最小值，保险起见
 
                 self.temp_AddLine(line_Part_A) #直接写入
+                self.line_NeedToWrite = False  ######把编辑标记解除掉，要不然换下一行的时候又给加进去了
 
             #如果后部有剩余,截取后半截保留
             if self.x_line[self.index_dict['终止年月']] < self.line[self.index_dict['终止年月']]:
@@ -113,6 +116,7 @@ class DataSet_Origin:
                 self.line = line_Part_B #保留数据
 
                 self.temp_AddLine(self.x_line) #后面都有剩余了，这行可以写进去了
+                self.line_NeedToWrite = True  ######加上标记，需要进行写入
                 return
 
         #计算完成后 递归调用，看看有没有下个情况，直到收到 'AddTemp' 或 'Calculate且后面有节余'为止
@@ -144,18 +148,19 @@ class DataSet_Origin:
 
     def line_DeleteOrigin(self):
         
-        if self.line_Edited == True: return
+        if self.line_Deleted == True: return
         
         self.ado_rs_delete.AddNew(['ID'],self.line[0:1]) #写入第一个值，就是ID
 
         #self.ado_rs.Delete()
-        self.line_Edited = True
+        self.line_Deleted = True
+        self.line_NeedToWrite = True
         self.count_Delete = self.count_Delete + 1
     
     def line_LoadNext(self , LoadFirstLine = False):
 
         #如果该行处于编辑状态，换下一行之前写入当前行
-        if self.line_Edited == True:
+        if self.line_NeedToWrite == True:
             self.temp_AddLine(self.line)
         
         #line初始化[]
@@ -168,7 +173,8 @@ class DataSet_Origin:
             for i in self.Key_NameList:
                 self.line.append(self.ado_rs.Fields.Item(i).Value)  #使用ado.field.Item(x).Value进行读取
 
-            self.line_Edited = False
+            self.line_NeedToWrite = False
+            self.line_Deleted = False
         except:
             self.line = []
     def temp_AddLine(self,add_line):
