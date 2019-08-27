@@ -61,7 +61,10 @@ Function TT_Server_Calculate()
     '如果没有得到运行结果，执行PardonMe
     Pardon_Count = 0
     do while Server_ReturnString = "[Request_Get_Fail]"
+
         Pardon_Count = Pardon_Count + 1
+        Server_ReturnString = Request_Get("/PardonMe") '重新获取
+
         Diary_Add "Running", "TT_Execute[" & RecordCount & "] Pardon_Count = " & Pardon_Count '提示Pardon中
         '如果执行半天了都没有回复：报错吧！！！ 初步设置为 300s
         if (Timer()-Start_Time) > 300 then msgbox(0/0/0/0/0/0/0)  '报错吧！！！！！
