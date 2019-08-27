@@ -23,7 +23,7 @@ from werkzeug.serving import run_simple
 
 from werkzeug.wrappers import Response
 
-#import time #测试时使用
+import time #用于延时等待
 #import tqdm #测试时使用
 import socket #用于检测端口
 import fire #实现命令行参数
@@ -42,6 +42,7 @@ dict_parameter={
     'Server/PortSeed':8400,
     'Server/Port':8400,
     'Thread/Running':False,
+    'Thread/return_string':'',
     'Thread/Source':test_Thread,
     'Thread/str_Path':'',
     'Thread/str_Value':''
@@ -157,8 +158,9 @@ def application(environ, start_response):
     执行函数 return_string = dict_parameter['Thread/Source'](dict_parameter)
     Execute后面的url会存储在如上所示的两个变量中，字符支持有限，中文直接乱码。暂不支持POST方式。"""
     if str_Command == 'Execute':
+        Execute_StartTime = time.time()
         if dict_parameter['Thread/Running'] == True:
-            response = Response(dict_ResponseText['未找到对应命令'], mimetype='text/plain')
+            response = Response(dict_ResponseText['Thread/Running = True 暂时不接受新命令'], mimetype='text/plain')
             return response(environ, start_response)
         dict_parameter['Thread/str_Path']=str_Path
         dict_parameter['Thread/str_Value']=str_Value
@@ -166,10 +168,22 @@ def application(environ, start_response):
         #开始运行
         dict_parameter['Thread/Running'] = True
         return_string = dict_parameter['Thread/Source'](dict_parameter)
+        dict_parameter['Thread/return_string'] = return_string
         dict_parameter['Thread/Running'] = False
+
+        print("运行完毕： {} ms".format(int(time.time() - Execute_StartTime)*1000))
 
         #print(return_string)
         response = Response(return_string, mimetype='text/plain')
+        return response(environ, start_response)
+
+
+    dict_doc['PardonMe'] = """命令: localhost:[port]/PardonMe
+    用于重新获取正在运行或上一次运行的返回字符串，如果没有运行完成，将自动等待"""
+    if str_Command == 'PardonMe':
+        while dict_parameter['Thread/Running'] == True:
+            time.sleep(1)
+        response = Response(dict_parameter['Thread/return_string'], mimetype='text/plain')
         return response(environ, start_response)
 
 

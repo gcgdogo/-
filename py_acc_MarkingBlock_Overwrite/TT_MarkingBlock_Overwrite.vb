@@ -49,12 +49,23 @@ Function TT_Server_Calculate()
     Dim Start_Time as Double
     Dim RecordCount as Long
     Dim Server_ReturnString as String
+    Dim Pardon_Count as Integer
+
     RecordCount = SourceTable_RecordCount()  '记录一下数据量，要不然可能有部分数据没写完，调用一下Access的数据连接，看看数据写完没
 
     Start_Time = Timer()
     Diary_Add "Running", "TT_Execute[" & RecordCount & "]" '提示开始运行
 
     Server_ReturnString = Request_Get("/Execute/Calculate") '运行命令
+
+    '如果没有得到运行结果，执行PardonMe
+    Pardon_Count = 0
+    do while Server_ReturnString = "[Request_Get_Fail]"
+        Pardon_Count = Pardon_Count + 1
+        Diary_Add "Running", "TT_Execute[" & RecordCount & "] Pardon_Count = " & Pardon_Count '提示Pardon中
+        '如果执行半天了都没有回复：报错吧！！！ 初步设置为 300s
+        if (Timer()-Start_Time) > 300 then msgbox(0/0/0/0/0/0/0)  '报错吧！！！！！
+    loop
 
     Diary_Add "Message", "TT_Execute[" & RecordCount & "]:" & int((Timer()-Start_Time)*1000) & "ms " & Server_ReturnString
     
