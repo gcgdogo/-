@@ -32,8 +32,36 @@ Private Function TT_Server_Initalize()
     Request_Get "/Execute/Connect" '链接数据库
 End Function
 
+Private Function SourceTable_RecordCount()
+    Dim ADO_rs as New ADODB.Recordset
+    
+    ADO_rs.ActiveConnection = CurrentProject.Connection
+    ADO_rs.Source = "标注数据追加"
+    ADO_rs.CursorType = adOpenStatic
+    ADO_rs.LockType = adLockReadOnly
+    ADO_rs.Open
+    SourceTable_RecordCount = ADO_rs.RecordCount
+    
+    ADO_rs.Close
+End Function
+
 Function TT_Server_Calculate()
-    Request_Get "/Execute/Calculate" '运行命令
+    Dim Start_Time as Double
+    Dim RecordCount as Long
+    Dim Server_ReturnString as String
+    RecordCount = SourceTable_RecordCount()  '记录一下数据量，要不然可能有部分数据没写完，调用一下Access的数据连接，看看数据写完没
+
+    Start_Time = Timer()
+    Diary_Add "Running", "TT_Execute[" & RecordCount & "]" '提示开始运行
+
+    Server_ReturnString = Request_Get("/Execute/Calculate") '运行命令
+
+    Diary_Add "Message", "TT_Execute[" & RecordCount & "]:" & int((Timer()-Start_Time)*1000) & "ms " & Server_ReturnString
+    
+    if RecordCount <> SourceTable_RecordCount() then
+        msgbox("发现错误!  执行计算后发现有新增的记录 " & RecordCount & " > " & SourceTable_RecordCount())
+        msgbox(0/0/0/0/0/0/0)  '报错吧！！！！！
+    end if
 End Function
 
 Private Function Get_URL()
@@ -92,3 +120,7 @@ End Function
 sub TT_Test()
     TT_Server_Start "F:\Site\GitHub\-\py_acc_MarkingBlock_Overwrite\MarkingBlock_Overwrite.py",8460,"MarkingBlock_Overwrite"
 End sub
+
+Sub TT_Count()
+    MsgBox (SourceTable_RecordCount())
+End Sub

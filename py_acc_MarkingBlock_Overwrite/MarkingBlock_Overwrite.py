@@ -1,6 +1,7 @@
 import win32com.client
 import HTTP_Thread_Trigger
 import numpy
+#import pickle # 测试用
 
 def YM_Cal( YM_input , X_offset ):
     Months = (YM_input // 100) * 12 + (YM_input % 100)
@@ -13,6 +14,10 @@ class DataSet_Origin:
         #需要写入的行先临时保存起来
         self.temp_LinesToWrite = []
 
+        #保存运行记录
+        self.list_log = []
+        for i in range(10):
+            self.list_log.append(('',[],[]))
         #保存ado链接
         self.ado_con = ado_con
 
@@ -93,10 +98,18 @@ class DataSet_Origin:
             self.line_LoadNext()
 
         if self.line_Compare() == 'AddTemp':
+
+            self.list_log = self.list_log[1:]
+            self.list_log.append(('AddTemp',self.line.copy(),self.x_line.copy()))
+
             self.temp_AddLine(self.x_line)
             return
         
         if self.line_Compare() == 'Calculate':
+
+            self.list_log = self.list_log[1:]
+            self.list_log.append(('Calculate',self.line.copy(),self.x_line.copy()))
+
             self.line_DeleteOrigin()
             # line_Part_A 为前半段  /  line_Part_B 为后半段
             line_Part_A = []
@@ -126,6 +139,9 @@ class DataSet_Origin:
                 self.temp_AddLine(self.x_line) #后面都有剩余了，这行可以写进去了
                 self.line_NeedToWrite = True  ######加上标记，需要进行写入
                 return
+            else:
+                self.line_LoadNext()  #后面要是没有节余就可以移动到下一行了
+
 
         #计算完成后 递归调用，看看有没有下个情况，直到收到 'AddTemp' 或 'Calculate且后面有节余'为止
         self.addnew(x_line)
@@ -137,6 +153,15 @@ class DataSet_Origin:
         if self.x_line[self.index_dict['员工字段ID']] > self.line[self.index_dict['员工字段ID']]: return 'LoadNext'
         if self.x_line[self.index_dict['员工字段ID']] < self.line[self.index_dict['员工字段ID']]: return 'AddTemp'
         
+        #如果字段名称或员工编号不相等，赶紧报错！！
+        if self.x_line[self.index_dict['字段名称']] != self.line[self.index_dict['字段名称']] \
+            or self.x_line[self.index_dict['员工编号']] != self.line[self.index_dict['员工编号']]:
+
+            print('字段名称不相等警告！')
+            print('已有:{}'.format(repr(self.line)))
+            print('写入:{}'.format(repr(self.x_line)))
+            print(0/0/0/0/0/0/0/0/0/0)   ############报错吧！！！
+
         #如果相邻且相等 则进行计算
         if self.x_line[self.index_dict['字段内容']] == self.line[self.index_dict['字段内容']]:
             if YM_Cal(self.x_line[self.index_dict['起始年月']] , -1 ) == self.line[self.index_dict['终止年月']]: return 'Calculate'
@@ -193,6 +218,13 @@ class DataSet_Origin:
                 #如果后加的年月小于前一行，赶紧报错啊！！！
                 if self.temp_LinesToWrite[-1][self.index_dict['终止年月']] >= add_line[self.index_dict['起始年月']]:
                     print("后加的年月小于前一行，赶紧报错啊！！！")
+                    print(self.temp_LinesToWrite[-1])
+                    print(add_line)
+
+                    print("self.list_log:")
+                    for i in self.list_log:
+                        print(i)
+
                     print(0/0/0/0/0/0/0/0/0/0/0/0) #直接报错就得了
 
                 #检测最后一行是否相等
@@ -206,6 +238,10 @@ class DataSet_Origin:
         self.temp_LinesToWrite.append(add_line)
 
     def temp_FinishAndWrite(self):
+        
+        #先尝试把位置移动到下一行，避免最后一行写入后，当前line处于编辑状态
+        self.line_LoadNext()
+
         #一次性删除
         self.ado_con.Execute(
             'DELETE {0}.* FROM {0} INNER JOIN {1} ON {0}.ID = {1}.ID;'.format(self.table_name,self.table_delete_name)
@@ -220,6 +256,10 @@ class DataSet_Origin:
         self.count_Write = len(self.temp_LinesToWrite)
 
         for i_line in self.temp_LinesToWrite :
+
+            #监视符合条件的行是否写入了
+            #if i_line[self.index_dict['员工编号']] == '1301931' : print('write{}'.format(repr(i_line)))
+
             self.ado_rs.AddNew(self.Key_NameList[1:] , i_line[1:]) #第一个位置是行号，不参与导入
             self.ado_rs.Update()
         
@@ -301,14 +341,30 @@ class DataSet_Overwrite():
         self.ado_rs.Open()
         #print('DataSet_Overwrite.lines 读取')
 
+        print("DataSet_Overwrite.ado_rs.RecordCount = {}".format(self.ado_rs.RecordCount))
+
         try:
             self.ado_rs.MoveFirst()
             self.lines = numpy.array(self.ado_rs.GetRows()).T.tolist()  #直接一次性读取，用numpy进行转置和计算
         except:
             self.lines = []
 
+        # if len(self.lines)!=self.ado_rs.RecordCount :
+        #     print("读取行数不一致！: {} _ {}".format(len(self.lines),self.ado_rs.RecordCount))
+        #     pickle.dump(
+        #         self.lines,
+        #         open(r'F:\Database\Development\人员类别演算\py_HTTP_ThreadTriger_改造测试\Error_Data_{}_{}.txt'.format(
+        #             len(self.lines),
+        #             self.ado_rs.RecordCount
+        #             ), 'wb')
+        #     ) 
+
+
         #print(self.lines)
         for read_line in self.lines:
+            #监视符合条件的行是否尝试进行转换
+            #if read_line[1] == '1301931' : print('convert{}'.format(repr(read_line)))
+
             self.ID_Recorder.convert(read_line)
         # while self.ado_rs.EOF == False:
         #     read_line=[]
@@ -321,7 +377,7 @@ class DataSet_Overwrite():
         #     self.ado_rs.MoveNext()
 
 
-        print('DataSet_Overwrite.lines 排序')
+        #print('DataSet_Overwrite.lines 排序')
         # 开始排序，目标字段整合成元组之后再排序
         self.lines.sort(
             key = lambda x : (
@@ -374,7 +430,7 @@ ID_Recorder : 用来保存已经计算过的 员工字段ID"""
 
         #建立数据库 Connection
         dict_parameter['ADO_Connection'] = win32com.client.Dispatch(r'ADODB.Connection')
-        dict_parameter['ADO_Connection'].Open(r'Provider=Microsoft.ACE.OLEDB.12.0;Data Source={};Jet OLEDB:Max Locks Per File=20000'.format(dict_parameter['FileName']))
+        dict_parameter['ADO_Connection'].Open(r'Provider=Microsoft.ACE.OLEDB.12.0;Data Source={}'.format(dict_parameter['FileName']))
 
         #建立 ID_Recorder
         dict_parameter['ID_Recorder'] = ID_Recorder(dict_parameter['Key_NameList'])
@@ -384,16 +440,20 @@ ID_Recorder : 用来保存已经计算过的 员工字段ID"""
     #命令：Calculate
     if dict_parameter['Thread/str_Path'] == 'Calculate' :
 
+        #测试代码：看看每次都重新连接数据库行不行
+        win32_ADO_Connection = win32com.client.Dispatch(r'ADODB.Connection')
+        win32_ADO_Connection.Open(r'Provider=Microsoft.ACE.OLEDB.12.0;Data Source={}'.format(dict_parameter['FileName']))
+
     #链接创建 DataSet_Overwrite
         DS_Overwrite = DataSet_Overwrite(
-            ado_con = dict_parameter['ADO_Connection'],
+            ado_con = win32_ADO_Connection,
             table_name = dict_parameter['Table_Overwrite'],
             Key_NameList = dict_parameter['Key_NameList'],
             ID_Recorder = dict_parameter['ID_Recorder']
         )
     #链接创建 DataSet_Origin
         DS_Origin = DataSet_Origin(
-            ado_con = dict_parameter['ADO_Connection'],
+            ado_con = win32_ADO_Connection,
             table_name = dict_parameter['Table_Origin'],
             Key_NameList = dict_parameter['Key_NameList']
         )
@@ -401,17 +461,23 @@ ID_Recorder : 用来保存已经计算过的 员工字段ID"""
     #叠加计算
         #遍历各行
         for i_line in DS_Overwrite.lines:
+            #监视符合条件的行是否尝试添加了
+            #if i_line[1] == '1301931' : print('try_add{}'.format(repr(i_line)))
+
             DS_Origin.addnew(i_line)
         #最后写入
         DS_Origin.temp_FinishAndWrite()
 
-        Return_String = '数据整合完毕 Input = {} Delete = {} AddTemp = {} Write = {}'.format(
+        Return_String = '数据整合完毕 Lines = {} Input = {} Delete = {} AddTemp = {} Write = {}'.format(
+            len(DS_Overwrite.lines),
             DS_Origin.count_Input,
             DS_Origin.count_Delete,
             DS_Origin.count_AddTemp,
             DS_Origin.count_Write
         )
-    
+
+        win32_ADO_Connection.Close()
+
     win32com.client.pythoncom.CoUninitialize() #释放多线程
 
     return Return_String
