@@ -158,6 +158,7 @@ def application(environ, start_response):
     执行函数 return_string = dict_parameter['Thread/Source'](dict_parameter)
     Execute后面的url会存储在如上所示的两个变量中，字符支持有限，中文直接乱码。暂不支持POST方式。"""
     if str_Command == 'Execute':
+        Execute_StartTime = time.time()
         if dict_parameter['Thread/Running'] == True:
             response = Response(dict_ResponseText['Thread/Running = True 暂时不接受新命令'], mimetype='text/plain')
             return response(environ, start_response)
@@ -169,6 +170,8 @@ def application(environ, start_response):
         return_string = dict_parameter['Thread/Source'](dict_parameter)
         dict_parameter['Thread/return_string'] = return_string
         dict_parameter['Thread/Running'] = False
+
+        print("运行完毕： {} ms".format(int(time.time() - Execute_StartTime)*1000))
 
         #print(return_string)
         response = Response(return_string, mimetype='text/plain')
