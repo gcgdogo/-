@@ -214,6 +214,13 @@ def application(environ, start_response):
         return response(environ, start_response)
 
 
+    dict_doc['Shutdown'] = """命令: localhost:[port]/Shutdown
+    调用environ['werkzeug.server.shutdown']()
+    结束程序，关闭服务"""
+    if str_Command == 'Shutdown':
+        environ['werkzeug.server.shutdown']()  #直接关闭就好啦~~~
+
+
     dict_doc['Help'] = """命令: localhost:[port]/('Help','H','h')
     显示本帮助信息"""
     #其他说明放这里

@@ -51,6 +51,7 @@ Function TT_Server_Calculate()
     Dim Server_ReturnString as String
     Dim Pardon_Count as Integer
 
+
     RecordCount = SourceTable_RecordCount()  '记录一下数据量，要不然可能有部分数据没写完，调用一下Access的数据连接，看看数据写完没
 
     Start_Time = Timer()
@@ -86,7 +87,7 @@ Private Function Get_URL()
     for Max_I=0 to 5  '0,0,1,0,1,2,3的循序循环
         for I=0 to Max_I
             DoEvents
-            TT_URL = "http://localhost:" + cstr(TT_PortSeed + I * 567)
+            TT_URL = "http://127.0.0.1:" + cstr(TT_PortSeed + I * 567)
             
             Got_ServerName = Request_Get("/Parameter/Server/Name")
 
@@ -100,9 +101,11 @@ Private Function Get_URL()
 End Function
 
 Function Request_Get(URL_append as String)
-    On Error Goto Request_Get_Fail
+
     Static WinReq As WinHttpRequest
     Static WinReq_URL As String
+
+    On Error Goto Request_Get_Fail
     if WinReq_URL = "" then set WinReq = New WinHttpRequest
     if WinReq_URL <> TT_URL + URL_append then
         WinReq.Open "GET", TT_URL + URL_append 'URL变化就重新OPEN一下
@@ -116,9 +119,11 @@ Request_Get_Fail:
 End Function
 
 Function Request_Post(URL_append as String , str_Message as String)
-    On Error Goto Request_Post_Fail
+
     Static WinReq As WinHttpRequest
     Static WinReq_URL As String
+    
+    On Error Goto Request_Post_Fail
     if WinReq_URL = "" then set WinReq = New WinHttpRequest
     if WinReq_URL <> TT_URL + URL_append then
         WinReq.Open "POST", TT_URL + URL_append 'URL变化就重新OPEN一下
@@ -137,4 +142,49 @@ End sub
 
 Sub TT_Count()
     MsgBox (SourceTable_RecordCount())
+End Sub
+
+
+
+Sub Request_Get_SpeedTest()
+
+    Dim CommandString As String
+    Dim In_PythonFileName As String, In_PortSeed As Integer, In_ServerName As String
+    Dim Seconds_to_Wait as Double , Last_Time as Double , I as Integer , Server_ReturnString as String
+
+    Dim URL_append as String
+    In_PythonFileName = "F:\Site\GitHub\-\py_acc_MarkingBlock_Overwrite\MarkingBlock_Overwrite.py"
+    In_PortSeed = 8460
+    In_ServerName = "MarkingBlock_Overwrite:Request_Get_SpeedTest"
+
+    CommandString = "python " + In_PythonFileName + " --Server/Name=" + In_ServerName + " --Server/PortSeed=" + CStr(In_PortSeed)
+    Diary_Add "Running", "TT_Server_Start : " + CommandString
+    Shell CommandString  '执行命令启动程序
+    
+    '变量设置
+    TT_PortSeed = In_PortSeed
+    TT_ServerName = In_ServerName
+
+    Call Get_URL()
+
+    '间隔等待时间
+    Seconds_to_Wait = 1
+
+    URL_append = "/Parameter/Server/Name"
+    set WinReq = New WinHttpRequest
+    WinReq.Open "GET", TT_URL + URL_append
+    for I = 1 to 10
+        Last_Time = timer()
+        WinReq.Send
+        Server_ReturnString = WinReq.ResponseText
+
+        Diary_Add "Message", "Loop " & I & " 耗时 " & int((timer() - Last_Time)*1000) & "ms : 得到结果" & Server_ReturnString
+        Last_Time = timer()
+        Diary_Add "Running", "Seconds_to_Wait = " & Seconds_to_Wait
+        do while (timer() - Last_Time) < Seconds_to_Wait
+            DoEvents
+            DoEvents
+            DoEvents
+        loop
+    next
 End Sub
