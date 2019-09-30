@@ -427,7 +427,7 @@ ID_Recorder : 用来保存已经计算过的 员工字段ID"""
 
     #命令：Connect
     if dict_parameter['Thread/str_Path'] == 'Connect' :
-
+        #虽然这个Connection没啥用，但是如果不保持一个连接，保持占用状态，每次重连都会很慢
         #建立数据库 Connection
         dict_parameter['ADO_Connection'] = win32com.client.Dispatch(r'ADODB.Connection')
         dict_parameter['ADO_Connection'].Open(r'Provider=Microsoft.ACE.OLEDB.12.0;Data Source={}'.format(dict_parameter['FileName']))

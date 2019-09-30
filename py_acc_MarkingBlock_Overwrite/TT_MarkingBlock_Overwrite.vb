@@ -26,7 +26,7 @@ End Function
 Private Function TT_Server_Initalize() 
 '初始化
     Request_Post "/Parameter/FileName", "'" + Application.CurrentProject.FullName + "'"
-    Request_Post "/Parameter/Table_Origin","'标注数据整合_python'"
+    Request_Post "/Parameter/Table_Origin","'标注数据整合'"
     Request_Post "/Parameter/Table_Overwrite","'标注数据追加'"
 
     Request_Get "/Execute/Connect" '链接数据库
@@ -51,6 +51,7 @@ Function TT_Server_Calculate()
     Dim Server_ReturnString as String
     Dim Pardon_Count as Integer
 
+    Dim ADO_con as New ADODB.Connection
 
     RecordCount = SourceTable_RecordCount()  '记录一下数据量，要不然可能有部分数据没写完，调用一下Access的数据连接，看看数据写完没
 
@@ -70,6 +71,10 @@ Function TT_Server_Calculate()
         '如果执行半天了都没有回复：报错吧！！！ 初步设置为 300s
         if (Timer()-Start_Time) > 300 then msgbox(0/0/0/0/0/0/0)  '报错吧！！！！！
     loop
+
+    '尝试建立新连接后关闭，用这种方法强制等待进程写入完成
+    ADO_con.Open "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & Application.CurrentProject.FullName
+    ADO_con.Close 
 
     Diary_Add "Message", "TT_Execute[" & RecordCount & "]:" & int((Timer()-Start_Time)*1000) & "ms " & Server_ReturnString
     
