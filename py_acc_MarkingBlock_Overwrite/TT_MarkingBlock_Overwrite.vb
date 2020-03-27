@@ -46,10 +46,13 @@ Private Function SourceTable_RecordCount()
 End Function
 
 Function TT_Server_Calculate()
-    Dim Start_Time as Double
+    Dim Start_Time as Double , Sleep_StTime as Double
+
     Dim RecordCount as Long
     Dim Server_ReturnString as String
+    Dim Server_Return_CheckCode as String , Server_Return_Infomation as String , Have_CheckCode as String
     Dim Pardon_Count as Integer
+    Dim I as Integer
 
     Dim ADO_con as New ADODB.Connection
 
@@ -72,16 +75,66 @@ Function TT_Server_Calculate()
         if (Timer()-Start_Time) > 300 then msgbox(0/0/0/0/0/0/0)  '报错吧！！！！！
     loop
 
-    '尝试建立新连接后关闭，用这种方法强制等待进程写入完成
-    ADO_con.Open "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & Application.CurrentProject.FullName
-    ADO_con.Close 
+    for I = 1 to len(Server_ReturnString)
+        if mid(Server_ReturnString,I,2) = "::" then
+            Server_Return_CheckCode = left(Server_ReturnString , I - 1)
+            Server_Return_Infomation = mid(Server_ReturnString,I + 2 , len(Server_ReturnString))
+            exit for
+        end if
+    next
+
+    '允许重试校验50次
+    for I = 1 to 50
+        Have_CheckCode = TT_CheckCode()
+        if Have_CheckCode = Server_Return_CheckCode then
+            Diary_Add "Running", "[CheckCode #" & format(I,"00") & ": Checked ] 返回值 = " & Server_Return_CheckCode & " 本地值 = " & Have_CheckCode
+            exit for
+        else
+            Diary_Add "Running", "[CheckCode #" & format(I,"00") & ": Failure ] 返回值 = " & Server_Return_CheckCode & " 本地值 = " & Have_CheckCode
+        end if
+
+        '等待0.5秒
+        Sleep_StTime = Timer()
+        do while timer() -Sleep_StTime < 0.5
+            DoEvents
+            DoEvents
+            DoEvents
+            DoEvents
+            DoEvents
+        loop
+
+    next
+
+    if Server_Return_CheckCode = "" then Server_Return_Infomation = "未找到CheckCode！！" + Server_ReturnString
 
     Diary_Add "Message", "TT_Execute[" & RecordCount & "]:" & int((Timer()-Start_Time)*1000) & "ms " & Server_ReturnString
-    
+    'Diary_Add "Message", TT_CheckCode()
+
     if RecordCount <> SourceTable_RecordCount() then
         msgbox("发现错误!  执行计算后发现有新增的记录 " & RecordCount & " > " & SourceTable_RecordCount())
         msgbox(0/0/0/0/0/0/0)  '报错吧！！！！！
     end if
+End Function
+
+Function TT_CheckCode()
+    Dim SQL_str as String
+    Dim ADO_rs as New ADODB.Recordset
+
+    SQL_str = "SELECT " & _
+        "format(count(ID) mod 1000000 ,""000000"") & ""-"" & " & _
+        "format(sum(ID mod 983) mod 1000000 ,""000000"") & ""-"" & " & _
+        "format(sum(ID mod 997) mod 1000000 ,""000000"") " & _
+        "As Check_Code FROM 标注数据整合;"
+    
+    ADO_rs.ActiveConnection = CurrentProject.Connection
+    ADO_rs.Source = SQL_str
+    ADO_rs.CursorType = adOpenStatic
+    ADO_rs.LockType = adLockReadOnly
+    ADO_rs.Open
+
+    TT_CheckCode = ADO_rs.Fields.Item(0).Value
+    
+    ADO_rs.Close
 End Function
 
 Private Function Get_URL()

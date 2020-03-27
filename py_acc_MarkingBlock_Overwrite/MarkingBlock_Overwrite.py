@@ -3,6 +3,8 @@ import HTTP_Thread_Trigger
 import numpy
 #import pickle # 测试用
 
+import ADO_Table_Verify #用于校验数据库
+
 def YM_Cal( YM_input , X_offset ):
     Months = (YM_input // 100) * 12 + (YM_input % 100)
     Months = Months + X_offset - 1
@@ -458,6 +460,13 @@ ID_Recorder : 用来保存已经计算过的 员工字段ID"""
             Key_NameList = dict_parameter['Key_NameList']
         )
 
+    #创建校验码计算对象 Table_Verify
+        DS_Table_Verify = ADO_Table_Verify.Table_Verify(
+            ADO_Connection = win32_ADO_Connection,
+            x_TableName = dict_parameter['Table_Origin'],
+            x_ColumnName = "ID"
+        )
+
     #叠加计算
         #遍历各行
         for i_line in DS_Overwrite.lines:
@@ -475,6 +484,9 @@ ID_Recorder : 用来保存已经计算过的 员工字段ID"""
             DS_Origin.count_AddTemp,
             DS_Origin.count_Write
         )
+
+        # CheckCode 与返回信息 用 :: 分割
+        Return_String = DS_Table_Verify.cal_CheckCode() + "::" + Return_String
 
         win32_ADO_Connection.Close()
 
