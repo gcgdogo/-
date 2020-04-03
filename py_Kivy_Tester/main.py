@@ -1,4 +1,6 @@
 #coding:UTF-8
+from __future__ import division,print_function,absolute_import
+
 import sys
 import time
 log_file = open('log_file.txt','a')

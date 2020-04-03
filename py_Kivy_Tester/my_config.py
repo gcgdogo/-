@@ -1,4 +1,5 @@
 #coding:UTF-8
+from __future__ import division,print_function,absolute_import
 
 ###########################################
 #利用装饰器直接就把设置命令执行了

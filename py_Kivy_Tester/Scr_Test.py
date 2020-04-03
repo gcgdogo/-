@@ -1,4 +1,5 @@
 #coding:UTF-8
+from __future__ import division,print_function,absolute_import
 
 if __name__ =='__main__':
     import my_config
@@ -9,13 +10,17 @@ from Reader import Reader
 from Button_ScreenManager import Button_ScreenManager
 
 class Scr_Test(Screen):
-    def __init__(self, Data_Source ):
+    def __init__(self, ParrentScreenManager, Data_Source ):
         Screen.__init__(self , name = 'Scr_Test')
+        self.ParrentScreenManager = ParrentScreenManager
         self.Data_Source = Data_Source
 
 
         #Reader         ########################
-        self.Reader = Reader(Doc_Source=self.Data_Source.Visable_Doc)
+        self.Reader = Reader(
+            Doc_Source = self.Data_Source.Visable_Doc,
+            on_DoubleClick = self.ParrentScreenManager.Swich_Screen
+        )
         self.Reader.size_hint = (0.7,1)
         self.Reader.Update()
 
@@ -41,6 +46,17 @@ class Scr_Test(Screen):
         self.Layout.add_widget(self.Button_Layout)
 
         self.add_widget(self.Layout)
+
+        #设定切换事件
+        self.bind(on_pre_enter = self.on_pre_enter , on_enter = self.on_enter)
+
+    def on_pre_enter(self , *args):  #清空选项
+        for I in self.List_BSM:
+            I.Switch_Button(New_Text = " ", Switch = False)
+
+    def on_enter(self , *args):  #载入选项
+        for I in zip(self.List_BSM , self.Data_Source.PreLoad_Text()):
+            I[0].Switch_Button(New_Text = I[1] , Switch = False)
 
 if __name__ =='__main__':
     from kivy.app import App

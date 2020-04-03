@@ -1,4 +1,5 @@
 #coding:UTF-8
+from __future__ import division,print_function,absolute_import
 
 if __name__ =='__main__':
     import my_config
