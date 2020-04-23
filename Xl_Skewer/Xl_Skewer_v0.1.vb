@@ -3,7 +3,8 @@ Option Explicit
 Dim Global_SkewerWorkbook as Workbook
 Dim Global_SkewerHeader as Range
 
-Dim Waker_Filenames(1000) as String , Waker_Filenames_Count as Integer
+'存储相对路径
+Dim Waker_Filenames(1000) as String , Waker_Filenames_Count as Integer , Waker_Filenames_Finger as Integer
 
 '设定Header
 Sub Skewer_HeaderSet(optional Cal As XlCalculation)
@@ -101,7 +102,7 @@ Function Find_SkewerWorkbook() as Boolean
             Exit Function
         end If
     end If
-    
+
     if not SkewerWorkbook_Found then
         Msgbox("无法定位：未发现文件存在SkewerHeader")
         Find_SkewerWorkbook = False
@@ -176,7 +177,7 @@ Sub Skewer_LoadFilename(optional Cal As XlCalculation)
         if X_Workbook.Name <> Global_SkewerWorkbook.Name then
             '检查文件名是否已存在
             X_Workbook_Found = False
-            X_Workbook_CutName = mid(X_Workbook.FullName , len(X_Workbook.Path) + 1 , 9999)
+            X_Workbook_CutName = mid(X_Workbook.FullName , len(Global_SkewerWorkbook.Path) + 1 , 9999)
             for SkewerFinger_Row = 1 to SkewerFinger_MaxRow()
                 if  X_Workbook_CutName = Global_SkewerHeader.offset(SkewerFinger_Row,0).Cells(1).Text then
                     X_Workbook_Found = True
@@ -194,35 +195,222 @@ Sub Skewer_LoadFilename(optional Cal As XlCalculation)
 End Sub
 
 '开始遍历目标文件
-Sub Skewer_FileWalker(optional Cal As XlCalculation)
+Sub Skewer_FileWalker_Start(optional Cal As XlCalculation)
+    Dim SkewerFinger_Row as Long , SkewerFinger_Filename as String
+    Dim I as Integer
+
     '刷新 Global_SkewerWorkbook 和 Global_SkewerHeader
+    If Not Find_SkewerWorkbook() then Exit Sub
+
+    '当前文件必须是 SkewerWorkbook
+    If ActiveWorkbook.Name <> Global_SkewerWorkbook.Name then
+        msgbox("起点错误：当前文件必须是 Skewer")
+        exit Sub
+    end If
+
+    Waker_Filenames_Count = 0 '重置 Waker_Filenames
+    Waker_Filenames_Finger = 0
+
+    '遍历文件名
+    for SkewerFinger_Row = 1 to SkewerFinger_MaxRow()
+        SkewerFinger_Filename = Global_SkewerHeader.offset(SkewerFinger_Row,0).Cells(1).Text
+        '遍历核对现有 Waker_Filenames
+        for I = 1 to Waker_Filenames_Count
+            if  SkewerFinger_Filename = Waker_Filenames(I) then exit for
+        next
+        '没有则新增
+        if I > Waker_Filenames_Count then
+            Waker_Filenames_Count = Waker_Filenames_Count + 1
+            Waker_Filenames(Waker_Filenames_Count) = SkewerFinger_Filename
+        end if
+    next
+
+    Call Skewer_FileWalker_Next '调用打开文件
+
 End Sub
 
 '打开下一个文件
-Sub Skewer_FileWalker_Next()
-    '检测文件是否已经打开
+'反馈是否成功打开
+Function Skewer_FileWalker_Next() as Boolean           
+    Dim X_FullName as String
+    Dim X_Workbook as Workbook
+
+    Skewer_FileWalker_Next = False '初始值
+    '刷新 Global_SkewerWorkbook 和 Global_SkewerHeader
+    If Not Find_SkewerWorkbook() then Exit Function
+
+    'Finger自增，检验是否已经结尾
+    Waker_Filenames_Finger = Waker_Filenames_Finger + 1
+    if Waker_Filenames_Finger > Waker_Filenames_Count then
+        msgbox("文件遍历结束")
+        exit Function
+    end if
+
+    X_FullName = Global_SkewerWorkbook.Path + Waker_Filenames(Waker_Filenames_Finger)
+
+    '检测是否有同名文件
+    for each X_Workbook in application.workbooks
+        if right(X_FullName,len(X_Workbook.Name) + 1) = "\" & X_Workbook.Name then
+            msgbox("检测到同名文件，需要将其关闭")
+            X_Workbook.Close
+        end if
+    next
+    '如果关闭失败，终止
+    for each X_Workbook in application.workbooks
+        if right(X_FullName,len(X_Workbook.Name) + 1) = "\" & X_Workbook.Name then
+            msgbox("同名文件关闭失败，程序终止")
+            Skewer_FileWalker_Next = False
+            exit function
+        end if
+    next
 
     '以只读方式打开文件
-End Sub
+    application.workbooks.open Filename:=X_FullName , ReadOnly:=True
+
+    if activeworkbook.FullName <> X_FullName then
+        msgbox("文件名不一致，目标文件打开失败，程序终止")
+        Skewer_FileWalker_Next = False
+        exit function
+    end if
+
+    '调用格式化 Skewer_Range_Marker
+    call Skewer_Range_Marker
+
+    Skewer_FileWalker_Next = True
+
+End Function
 
 '设定Sheet,Range
 Sub Skewer_Range_Set(optional Cal As XlCalculation)
+    Dim X_Worksheet as Worksheet
+    Dim SkewerFinger_Row as Long
+
+    Dim X_CutName as String, X_Sheet as String, X_Range as String
+
+    Dim X_Range_RowED as Long , X_Range_ColED as Long
+    Dim X_Cell as Range
+
     '刷新 Global_SkewerWorkbook 和 Global_SkewerHeader
+    If Not Find_SkewerWorkbook() then Exit Sub
 
-    '如果 ActiveWindow.SelectedSheets 只有一个，且Selection所选择区域不大不小，就把选区设为Range
+    X_CutName = mid(activeworkbook.FullName , len(Global_SkewerWorkbook.Path) + 1 , 9999)
 
-    '默认采用ActiveSheet.UsedRange遍历删掉无效行列的方式
+
+    For each X_Worksheet in ActiveWindow.SelectedSheets
+        X_Sheet = X_Worksheet.Name
+        '检测现有Range
+        X_Range = ""
+        for SkewerFinger_Row = 1 to SkewerFinger_MaxRow()
+            With Global_SkewerHeader.offset(SkewerFinger_Row,0)
+                if .Cells(1).Text = X_CutName and .Cells(3).Text = X_Sheet then
+                    X_Range =  .Cells(4).Text
+                    exit for
+                end if
+            End With
+        next
+
+        '如果已有Range设定 ActiveWindow.SelectedSheets 只有一个，且Selection所选择区域不大不小，就把选区设为Range
+        '选区大小改为之后校验
+        If X_Range <> "" and ActiveWindow.SelectedSheets.Count = 1 then
+            X_Range = Selection.Address
+        else
+            '默认采用ActiveSheet.UsedRange遍历删掉末尾无效行列的方式
+            X_Range_RowED = 1
+            X_Range_ColED = 1
+            for each X_Cell in X_Worksheet.UsedRange.Cells
+                if X_Cell.Text <> "" or X_Cell.MergeCells then
+                    if X_Cell.Row > X_Range_RowED then X_Range_RowED = X_Cell.Row
+                    if X_Cell.Column > X_Range_ColED then X_Range_ColED = X_Cell.Column
+                end if
+            next
+            X_Range = "$A$1:" & X_Worksheet.cells( X_Range_RowED , X_Range_ColED ).address
+        end If
+
+        With X_Worksheet.Range(X_Range)
+            if .cells.count < 5 then
+                msgbox("选区过小保护(<5)")
+                X_Range = ""
+            end if
+            if .Columns.Count > 100 then
+                msgbox("选区过宽保护(>100)")
+                X_Range = ""
+            end If
+            if .Rows.Count > 10000 then
+                msgbox("选区过长保护(>10000)")
+                X_Range = ""
+            end If
+        End With
+        Call Write_Skewer_RangeData(activeworkbook.FullName , X_Worksheet.Name , X_Range)
+    Next
 
     '调用Skewer_Range_Marker
+    Call Skewer_Range_Marker
+
+End Sub
+
+'写入一行数据 , X_Range如果是空的就光是删除数据
+Sub Write_Skewer_RangeData(X_FullName as String, X_Sheet as String, X_Range as String)
+    Dim X_CutName as String
+    Dim SkewerFinger_Row as Long , SkewerFinger_Range as Range
+    Dim SkewerFinger_SelectedRow as Long
+    Dim Range_RowsToDelete as Range , Range_RowsToDelete_IsSet as Boolean
+
+    '刷新 Global_SkewerWorkbook 和 Global_SkewerHeader
+    If Not Find_SkewerWorkbook() then Exit Sub
+
+    X_CutName = mid(X_FullName , len(Global_SkewerWorkbook.Path) + 1 , 9999)
+    
+    '遍历删除所有对应 X_Sheet 的数据
+    Range_RowsToDelete_IsSet = False
+    SkewerFinger_SelectedRow =0
+
+    for SkewerFinger_Row = SkewerFinger_MaxRow to 1 step -1
+        set SkewerFinger_Range = Global_SkewerHeader.offset(SkewerFinger_Row,0)
+
+        if SkewerFinger_Range.Cells(1).Text = X_CutName and SkewerFinger_SelectedRow = 0 then '如果没有设置，就找文件名之后的一行
+            SkewerFinger_SelectedRow = SkewerFinger_Row + 1
+        end If
+
+        if SkewerFinger_Range.Cells(1).Text = X_CutName and SkewerFinger_Range.Cells(3) = X_Sheet then '判定一致
+
+            SkewerFinger_SelectedRow = SkewerFinger_Row
+
+            if Range_RowsToDelete_IsSet then '记录需要删除的行
+                set Range_RowsToDelete = Union(Range_RowsToDelete , SkewerFinger_Range.EntireRow)
+            else
+                set Range_RowsToDelete = SkewerFinger_Range.EntireRow
+                Range_RowsToDelete_IsSet = true
+            end if
+        end if
+    next
+
+    if Range_RowsToDelete_IsSet then Range_RowsToDelete.Delete  '删除需要删除的行
+
+    'X_Range如果是空的就光是删除数据
+    if X_Range <> "" then
+        '新建一行
+        Global_SkewerHeader.offset(SkewerFinger_SelectedRow,0).EntireRow.Insert Shift:=xlDown, CopyOrigin:=xlFormatFromLeftOrAbove
+        With Global_SkewerHeader.offset(SkewerFinger_SelectedRow,0)
+            .cells(1) = X_CutName
+            .cells(3) = X_Sheet
+            .cells(4) = X_Range
+        End With
+    End If
 End Sub
 
 '删除区域选定
 Sub Skewer_Range_UnSelect(optional Cal As XlCalculation)
+    Dim X_Worksheet as Worksheet
     '刷新 Global_SkewerWorkbook 和 Global_SkewerHeader
+    If Not Find_SkewerWorkbook() then Exit Sub
 
-    '遍历删除该表对应的所有行
+    For each X_Worksheet in ActiveWindow.SelectedSheets
+        '遍历删除该表对应的所有行
+        Call Write_Skewer_RangeData(activeworkbook.FullName , X_Worksheet.Name , "") '设为空就删除了
+    Next
 
     '调用Skewer_Range_Marker
+    Call Skewer_Range_Marker
 
 End Sub
 
