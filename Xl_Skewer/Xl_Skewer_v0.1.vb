@@ -93,6 +93,15 @@ Function Find_SkewerWorkbook() as Boolean
         next
     next
 
+    'SkewerHeader 必须已经保存，即为有路径
+    if SkewerWorkbook_Found then
+        if Global_SkewerWorkbook.Path = "" then
+            Msgbox("无法定位：SkewerHeader所在路径获取失败")
+            Find_SkewerWorkbook = False
+            Exit Function
+        end If
+    end If
+    
     if not SkewerWorkbook_Found then
         Msgbox("无法定位：未发现文件存在SkewerHeader")
         Find_SkewerWorkbook = False
@@ -107,10 +116,11 @@ End Function
 Function SkewerFinger_MaxRow()
     Dim SkewerFinger_Row as Long
     Static SkewerFinger_MaxRow_Stock as Long , SkewerFinger_MaxRow_CheckString as String
-    Dim X_Cell as String , X_CheckString as String
+    Dim X_Cell as Range , X_CheckString as String
+    Dim X_FileName as String , X_FileName_Check as Boolean
     '先看看末尾值是否已经调整
     X_CheckString = ""
-    for each X_Cell in Union(Global_SkewerHeader.offset(SkewerFinger_MaxRow,0),Global_SkewerHeader.offset(SkewerFinger_MaxRow + 1,0))
+    for each X_Cell in Union(Global_SkewerHeader.offset(SkewerFinger_MaxRow_Stock,0),Global_SkewerHeader.offset(SkewerFinger_MaxRow_Stock + 1,0))
         X_CheckString = X_CheckString & ":" & X_Cell.Text
     next
     '校验通过，那我不改了
@@ -119,16 +129,25 @@ Function SkewerFinger_MaxRow()
         Exit Function
     End if
     for SkewerFinger_Row = 1 to 500000  '先按照50万行最大值循环
+        X_FileName_Check = False 
+        X_FileName = Global_SkewerHeader.offset(SkewerFinger_Row,0).Cells(1).Text
+        if right(X_FileName,4) = ".xls" then X_FileName_Check = True
+        if right(X_FileName,5) = ".xlsx" then X_FileName_Check = True
+        if right(X_FileName,5) = ".xlsm" then X_FileName_Check = True  '暂时就先支持这几种格式吧
+        if X_FileName_Check = False then
+            SkewerFinger_MaxRow = SkewerFinger_Row - 1
+            exit Function
+        end If
+    next
+    msgbox("Function SkewerFinger_MaxRow() 获取失败")
 
-
-    '接着写……………………………………………………
 End Function
 
 '读取待处理文件名
 Sub Skewer_LoadFilename(optional Cal As XlCalculation)
     Dim X_Workbook as Workbook , X_Workbook_PathStock as String , X_Workbook_PathSame as Boolean
     Dim SkewerPath as String
-    Dim SkewerFinger_Row as Long , X_Workbook_Found as Boolean
+    Dim SkewerFinger_Row as Long , X_Workbook_Found as Boolean , X_Workbook_CutName as String
 
     '刷新 Global_SkewerWorkbook 和 Global_SkewerHeader
     If Not Find_SkewerWorkbook() then Exit Sub
@@ -155,11 +174,21 @@ Sub Skewer_LoadFilename(optional Cal As XlCalculation)
     '遍历，文件
     for each X_Workbook in application.workbooks
         if X_Workbook.Name <> Global_SkewerWorkbook.Name then
-        '检查文件名是否已存在
-        for SkewerFinger_Row = 1 to 500000  '先按照50万行最大值循环
-
-        next
-    '关闭文件
+            '检查文件名是否已存在
+            X_Workbook_Found = False
+            X_Workbook_CutName = mid(X_Workbook.FullName , len(X_Workbook.Path) + 1 , 9999)
+            for SkewerFinger_Row = 1 to SkewerFinger_MaxRow()
+                if  X_Workbook_CutName = Global_SkewerHeader.offset(SkewerFinger_Row,0).Cells(1).Text then
+                    X_Workbook_Found = True
+                    exit for
+                end if
+            next
+            '没找到就写入文件名
+            if X_Workbook_Found = False then
+                Global_SkewerHeader.offset(SkewerFinger_MaxRow() + 1,0).Cells(1).Value = X_Workbook_CutName
+            end if
+        '关闭文件
+        X_Workbook.Close
         end if
     next
 End Sub
