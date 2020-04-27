@@ -4,10 +4,10 @@ Dim Global_SkewerWorkbook as Workbook
 Dim Global_SkewerHeader as Range
 
 '存储相对路径
-Dim Waker_Filenames(1000) as String , Waker_Filenames_Count as Integer , Waker_Filenames_Finger as Integer
+Dim Walker_Filenames() as String , Walker_Filenames_Count as Integer , Walker_Filenames_Finger as Integer
 
 '设定Header
-Sub Skewer_HeaderSet(optional Cal As XlCalculation)
+Sub Skewer_HeaderSet(optional control As IRibbonControl)
     Dim Range_SkewerHeader as Range
     Dim I as Integer , I_Max as Integer
     Dim Range_Check as Boolean
@@ -119,6 +119,10 @@ Function SkewerFinger_MaxRow()
     Static SkewerFinger_MaxRow_Stock as Long , SkewerFinger_MaxRow_CheckString as String
     Dim X_Cell as Range , X_CheckString as String
     Dim X_FileName as String , X_FileName_Check as Boolean
+
+    '刷新 Global_SkewerWorkbook 和 Global_SkewerHeader
+    If Not Find_SkewerWorkbook() then Exit Function
+
     '先看看末尾值是否已经调整
     X_CheckString = ""
     for each X_Cell in Union(Global_SkewerHeader.offset(SkewerFinger_MaxRow_Stock,0),Global_SkewerHeader.offset(SkewerFinger_MaxRow_Stock + 1,0))
@@ -145,7 +149,7 @@ Function SkewerFinger_MaxRow()
 End Function
 
 '读取待处理文件名
-Sub Skewer_LoadFilename(optional Cal As XlCalculation)
+Sub Skewer_LoadFilename(optional control As IRibbonControl)
     Dim X_Workbook as Workbook , X_Workbook_PathStock as String , X_Workbook_PathSame as Boolean
     Dim SkewerPath as String
     Dim SkewerFinger_Row as Long , X_Workbook_Found as Boolean , X_Workbook_CutName as String
@@ -195,9 +199,11 @@ Sub Skewer_LoadFilename(optional Cal As XlCalculation)
 End Sub
 
 '开始遍历目标文件
-Sub Skewer_FileWalker_Start(optional Cal As XlCalculation)
+Sub Skewer_FileWalker_Start(optional control As IRibbonControl)
     Dim SkewerFinger_Row as Long , SkewerFinger_Filename as String
     Dim I as Integer
+
+    ReDim Walker_Filenames(1000) as String  'REDIM 一下，看看能不能解决BUG
 
     '刷新 Global_SkewerWorkbook 和 Global_SkewerHeader
     If Not Find_SkewerWorkbook() then Exit Sub
@@ -208,20 +214,20 @@ Sub Skewer_FileWalker_Start(optional Cal As XlCalculation)
         exit Sub
     end If
 
-    Waker_Filenames_Count = 0 '重置 Waker_Filenames
-    Waker_Filenames_Finger = 0
+    Walker_Filenames_Count = 0 '重置 Walker_Filenames
+    Walker_Filenames_Finger = 0
 
     '遍历文件名
     for SkewerFinger_Row = 1 to SkewerFinger_MaxRow()
         SkewerFinger_Filename = Global_SkewerHeader.offset(SkewerFinger_Row,0).Cells(1).Text
-        '遍历核对现有 Waker_Filenames
-        for I = 1 to Waker_Filenames_Count
-            if  SkewerFinger_Filename = Waker_Filenames(I) then exit for
+        '遍历核对现有 Walker_Filenames
+        for I = 1 to Walker_Filenames_Count
+            if  SkewerFinger_Filename = Walker_Filenames(I) then exit for
         next
         '没有则新增
-        if I > Waker_Filenames_Count then
-            Waker_Filenames_Count = Waker_Filenames_Count + 1
-            Waker_Filenames(Waker_Filenames_Count) = SkewerFinger_Filename
+        if I > Walker_Filenames_Count then
+            Walker_Filenames_Count = Walker_Filenames_Count + 1
+            Walker_Filenames(Walker_Filenames_Count) = SkewerFinger_Filename
         end if
     next
 
@@ -240,13 +246,13 @@ Function Skewer_FileWalker_Next() as Boolean
     If Not Find_SkewerWorkbook() then Exit Function
 
     'Finger自增，检验是否已经结尾
-    Waker_Filenames_Finger = Waker_Filenames_Finger + 1
-    if Waker_Filenames_Finger > Waker_Filenames_Count then
+    Walker_Filenames_Finger = Walker_Filenames_Finger + 1
+    if Walker_Filenames_Finger > Walker_Filenames_Count then
         msgbox("文件遍历结束")
         exit Function
     end if
 
-    X_FullName = Global_SkewerWorkbook.Path + Waker_Filenames(Waker_Filenames_Finger)
+    X_FullName = Global_SkewerWorkbook.Path + Walker_Filenames(Walker_Filenames_Finger)
 
     '检测是否有同名文件
     for each X_Workbook in application.workbooks
@@ -281,7 +287,7 @@ Function Skewer_FileWalker_Next() as Boolean
 End Function
 
 '设定Sheet,Range
-Sub Skewer_Range_Set(optional Cal As XlCalculation)
+Sub Skewer_Range_Set(optional control As IRibbonControl)
     Dim X_Worksheet as Worksheet
     Dim SkewerFinger_Row as Long
 
@@ -398,6 +404,7 @@ Sub Write_Skewer_RangeData(X_FullName as String, X_Sheet as String, X_Range as S
         Global_SkewerHeader.offset(SkewerFinger_SelectedRow,0).EntireRow.Insert Shift:=xlDown, CopyOrigin:=xlFormatFromLeftOrAbove
         With Global_SkewerHeader.offset(SkewerFinger_SelectedRow,0)
             .cells(1) = X_CutName
+            .cells(2) = X_Label
             .cells(3) = X_Sheet
             .cells(4) = X_Range
         End With
@@ -405,7 +412,7 @@ Sub Write_Skewer_RangeData(X_FullName as String, X_Sheet as String, X_Range as S
 End Sub
 
 '删除区域选定
-Sub Skewer_Range_UnSelect(optional Cal As XlCalculation)
+Sub Skewer_Range_UnSelect(optional control As IRibbonControl)
     Dim X_Worksheet as Worksheet
     '刷新 Global_SkewerWorkbook 和 Global_SkewerHeader
     If Not Find_SkewerWorkbook() then Exit Sub
@@ -447,7 +454,7 @@ Sub Skewer_Range_Marker()
         exit Sub
     end if
 
-    X_CutName = mid(X_FullName , len(Global_SkewerWorkbook.Path) + 1 , 9999)
+    X_CutName = mid(ActiveWorkbook.FullName , len(Global_SkewerWorkbook.Path) + 1 , 9999)
     for SkewerFinger_Row = 1 to SkewerFinger_MaxRow()
         if Global_SkewerHeader.offset(SkewerFinger_Row,0).Cells(1).Text = X_CutName then
             exit for
@@ -473,9 +480,9 @@ Sub Skewer_Range_Marker()
         for I = 1 to Worksheets.Count
             if Worksheets(I).Tab.Color = False then
                 TabColor(1) = 255
-                TabColor(2) = 255
-                TabColor(3) = 255
-                TabColor(4) = 255
+                TabColor(2) = 210
+                TabColor(3) = 210
+                TabColor(4) = 210
             else
                 TabColor(1) = int((int( Worksheets(I).Tab.Color / 256 / 256 / 256))/2 + 128)
                 TabColor(2) = int((int( Worksheets(I).Tab.Color / 256 / 256) mod 256)/2 + 128)
@@ -523,7 +530,19 @@ Sub Skewer_Range_Marker()
     if Remark_All_Sheets = False then  '部分重置模式还是要重置已选定的表的
         for I = 1 to ActiveWindow.SelectedSheets.Count
             With ActiveWindow.SelectedSheets(I)
-                .Tab.Color = RGB(0,0,0)
+                for J = 1 to len(ActiveWorkbook.Names("Skewer_SheetColor").Value)
+                    '把标签全都重置成原颜色的浅色版本
+                    TabColor_Str = mid(ActiveWorkbook.Names("Skewer_SheetColor").Value , J , len(.name) + 2 + 16)
+                    if left( TabColor_Str , len(.name) + 2) = "[" & .name & ":" then
+                        TabColor_Str = mid(TabColor_Str , len(.name) + 3 , 15)
+                        TabColor(1) = Val(mid(TabColor_Str , 1 , 3))
+                        TabColor(2) = Val(mid(TabColor_Str , 5 , 3))
+                        TabColor(3) = Val(mid(TabColor_Str , 9 , 3))
+                        TabColor(4) = Val(mid(TabColor_Str , 13 , 3))
+                        .Tab.Color = RGB(TabColor(4) , TabColor(3) , TabColor(2))
+                    end if
+
+                next
                 .Cells.Interior.Pattern = xlgray16
                 .Cells.Interior.PatternColor = 0
             End With
@@ -561,17 +580,17 @@ Sub Skewer_Range_Marker()
 
                             '只考虑高度，超宽的情况暂不考虑，表太大了，应用情况多再加这个功能吧
 
-                            ActiveWindow.Zoom <45
+                            ActiveWindow.Zoom = 45
                             ActiveWindow.ScrollRow = 1  
                             ActiveWindow.ScrollColumn = 1    '先恢复到起始位置
 
-                            Edit_Range_LastCell = .range(Edit_Range_Address).cells(.range(Edit_Range_Address).Cells.Count)
+                            Set Edit_Range_LastCell = .range(Edit_Range_Address).cells(.range(Edit_Range_Address).Cells.Count)
                             
                             For I = 1 To .range(Edit_Range_Address).Rows.Count / 3
 
                                 Split_Range_Height = 0
                                 Split_Range_Height = Split_Range_Height + .Range(.Cells(1) , .Cells(1).offset(I,0)).Height '加上半高度
-                                Split_Range_Height = Split_Range_Height + .Range(Edit_Range_LastCell , Edit_Range_LastCell.offset(-2 * I,0)) '加下半高度
+                                Split_Range_Height = Split_Range_Height + .Range(Edit_Range_LastCell , Edit_Range_LastCell.offset(-2 * I,0)).Height '加下半高度
 
                                 If ActiveWindow.Height / Split_Range_Height < 0.5 then Exit For
 
@@ -582,7 +601,7 @@ Sub Skewer_Range_Marker()
                             .Cells(1).offset(I,0).Select
                             ActiveWindow.FreezePanes = True   '冻结 I 行
 
-                            ActiveWindow.ScrollRow = Edit_Range_LastCell.offset(-2 * I,0) . Row '滚动到 -2I
+                            ActiveWindow.ScrollRow = Edit_Range_LastCell.offset(-2 * I,0).Row '滚动到 -2I
                         End If
                     End With
                 end if
@@ -595,7 +614,7 @@ Sub Skewer_Range_Marker()
 End Sub
 
 'Sheet,Range 设定完成
-Sub Skewer_RangeCommit(optional Cal As XlCalculation)
+Sub Skewer_RangeCommit(optional control As IRibbonControl)
     Dim I as Integer
     '刷新 Global_SkewerWorkbook 和 Global_SkewerHeader
     If Not Find_SkewerWorkbook() then Exit Sub
@@ -608,11 +627,12 @@ Sub Skewer_RangeCommit(optional Cal As XlCalculation)
         exit sub
     End If
 
+    activeworkbook.Close
     Call Skewer_FileWalker_Next
 End Sub
 
 '开始导入
-Sub Skewer_LoadRanges(optional Cal As XlCalculation)
+Sub Skewer_LoadRanges(optional control As IRibbonControl)
     Dim I as Long , J as Long
     Dim Checked_CutName as String
     Dim SkewerFinger_Row as Long
@@ -653,53 +673,64 @@ Sub Skewer_LoadRanges(optional Cal As XlCalculation)
                     end if
                 next
                 Checked_CutName = .cells(1).Text
+            end if
         end with
     next
     'SkewerFinger_Row FingerLen 遍历
     for SkewerFinger_Row = SkewerFinger_MaxRow() to 1 step -1
-        With Global_SkewerHeader.offset(I,0)
+        With Global_SkewerHeader.offset(SkewerFinger_Row,0)
             '读取 删除行
             X_CutName = .Cells(1).Text
             X_Label = .Cells(2).Text
             X_Sheet = .Cells(3).Text
             X_Range = .Cells(4).Text
-            .EntireRow.Delete  '先删除了再说
+            if X_Sheet <> "" and X_Range <> "" then  '先判断是不是空的
+                .EntireRow.Delete  '先删除了再说
+                With Global_SkewerHeader.Offset(SkewerFinger_Row, 0)  '删除了，那就重新With一下吧
+                    '检测是不是第一行
+                    If X_CutName <> .Cells(1).offset(-1,0).Text or _ 
+                        X_Sheet <> .Cells(3).offset(-1,0).Text or _
+                        X_Range <> .Cells(4).offset(-1,0).Text then  '如果是该Sheet的第一行就开始导入
 
-            '检测是不是第一行
-            If Not( _
-                X_CutName = .Cells(1).offset(-1,0).Text and _
-                X_Label = .Cells(2).offset(-1,0).Text and _
-                X_Sheet = .Cells(3).offset(-1,0).Text and _
-                X_Range = .Cells(4).offset(-1,0).Text _
-            ) then  '如果是该Sheet的第一行就开始导入
+                        X_Workbook = ""
 
-                X_Workbook = ""
+                        for J = 1 to workbooks.Count
+                            if right(workbooks(J).FullName , len(X_CutName)) = X_CutName then
+                                X_Workbook = workbooks(J).Name
+                                exit for
+                            end if
+                        next
 
-                for J = 1 to workbooks.Count
-                    if right(workbooks(I).FullName , len(X_CutName)) = X_CutName then
-                        X_Workbook = workbooks(I).Name
-                        exit for
-                    end if
-                next
+                        '检测文件是否已经打开，没有就打开
+                        if X_Workbook = "" then
+                            X_Workbook = application.workbooks.open(Filename:= Global_SkewerWorkbook.Path & X_CutName, ReadOnly:=True).Name  '打开文件 记录名字
+                            Global_SkewerWorkbook.Activate '当前文件切换回 SkewerWorkbook
+                        End If
 
-                '检测文件是否已经打开，没有就打开
-                if X_Workbook = "" then
-                    X_Workbook = (application.workbooks.open Filename:= Global_SkewerWorkbook.Path & X_CutName, ReadOnly:=True).Name  '打开文件 记录名字
-                    Global_SkewerWorkbook.Activate '当前文件切换回 SkewerWorkbook
-                End If
+                        Set Range_To_Load = Workbooks(X_Workbook).Worksheets(X_Sheet).Range(X_Range)
 
-                Set Range_To_Load = Workbooks(X_Workbook).Worksheets(X_Sheet).Range(X_Range)
+                        'FingerLen 按目标Range扩充
+                        .Worksheet.Range(.cells(1) , .cells(1).offset(Range_To_Load.Rows.Count - 1 , 0 )) _  
+                            .EntireRow.Insert Shift:=xlDown, CopyOrigin:=xlFormatFromLeftOrAbove
 
-                'FingerLen 按目标Range扩充
-                .Worksheet.Range(.cells(1) , .cells(1).offset(Range_To_Load.Height - 1 , 0 )) _  
-                    .EntireRow.Insert Shift:=xlDown, CopyOrigin:=xlFormatFromLeftOrAbove
+                        for I = SkewerFinger_Row to SkewerFinger_Row + Range_To_Load.Rows.Count - 1
+                            With Global_SkewerHeader.Offset(I, 0)
+                                .Cells(1).Value = X_CutName
+                                .Cells(2).Value = X_Label
+                                .Cells(3).Value = X_Sheet
+                                .Cells(4).Value = X_Range
 
-                '复制数据
-                Range_To_Load.Copy
-                .cells(1).offset(0,5).PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks:=False, Transpose:=False
-                .cells(1).offset(0,5).PasteSpecial Paste:=xlPasteFormats, Operation:=xlNone, SkipBlanks:=False, Transpose:=False
+                            End With
+                        next
 
-            End If
+                        '复制数据
+                        Range_To_Load.Copy
+                        Global_SkewerHeader.Offset(SkewerFinger_Row, 0).cells(1).offset(0,5).PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks:=False, Transpose:=False
+                        Global_SkewerHeader.Offset(SkewerFinger_Row, 0).cells(1).offset(0,5).PasteSpecial Paste:=xlPasteFormats, Operation:=xlNone, SkipBlanks:=False, Transpose:=False
+
+                    End If
+                End With
+            end if
         end with
     next
 

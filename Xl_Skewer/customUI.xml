@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+    <customUI xmlns="http://schemas.microsoft.com/office/2006/01/customui" xmlns:ns_EX="EX_Shared_Ribbon">
+        <ribbon>
+            <tabs>
+                <tab idQ="ns_EX:Tab_EX">
+                    <group id="Xl_Skewer_0_1" label="Xl_Skewer_0_1">
+                        <button id="BTN_Skewer_HeaderSet"
+                                label="锚定起点"
+                                imageMso="PivotShowDetails"
+                                size="large"
+                                onAction="Skewer_HeaderSet" />
+                        <button id="BTN_Skewer_LoadFilename"
+                                label="选定文件"
+                                imageMso="FilePrepareMenu"
+                                size="large"
+                                onAction="Skewer_LoadFilename" />
+                        <button id="BTN_Skewer_FileWalker_Start"
+                                label="遍历文件"
+                                imageMso="BibliographyManageSources"
+                                size="large"
+                                onAction="Skewer_FileWalker_Start" />
+
+                        <separator id="rxsep1"/>
+
+                        <button id="BTN_Skewer_Range_Set"
+                                label="标记区域"
+                                imageMso="AccessRelinkLists"
+                                size="large"
+                                onAction="Skewer_Range_Set" />
+                        <button id="BTN_Skewer_RangeCommit"
+                                label="确认提交"
+                                imageMso="FileCompatibilityChecker"
+                                size="large"
+                                onAction="Skewer_RangeCommit" />
+
+
+
+                        <button id="BTN_Skewer_Range_UnSelect"
+                                label="取消标记"
+                                imageMso="HyperlinkRemove"
+                                size="normal"
+                                onAction="Skewer_Range_UnSelect" />
+
+                        <separator id="rxsep2"/>
+
+
+                        <button id="BTN_Skewer_LoadRanges"
+                                label="复制数据"
+                                imageMso="Consolidate"
+                                size="large"
+                                onAction="Skewer_LoadRanges" />
+                    </group>
+                </tab>
+            </tabs>
+        </ribbon>
+    </customUI>
