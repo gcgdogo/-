@@ -436,6 +436,9 @@ Sub Skewer_Range_Marker()
     Dim SkewerFinger_Row as Long , X_CutName as String
     Dim I as Integer , J as Integer
     Dim TabColor(5) as Integer , TabColor_Str as String
+
+    Dim TabColor_Str_BlockName as String , TabColor_Str_BlockText as String
+
     Dim ActiveSheet_Name as String
     Dim Edit_Sheet_Name as String , Edit_Range_Address as String
     
@@ -499,7 +502,23 @@ Sub Skewer_Range_Marker()
             TabColor_Str = TabColor_Str & ":" & right("0000" & str(TabColor(4)),3)
             TabColor_Str = TabColor_Str & "] "
         next
-        ActiveWorkbook.Names.Add Name:="Skewer_SheetColor", RefersTo:="=""" & TabColor_Str & """"
+
+        'Skewer_SheetColor 允许长文本组合
+        I = 0
+        Do While Len(TabColor_Str) > 0
+            If I = 0 then
+                TabColor_Str_BlockName = "Skewer_SheetColor"
+            else
+                TabColor_Str_BlockName = "Skewer_SheetColor" & right("0000" & I ,3) '用Str(I)会多一个空格
+            End if
+
+            TabColor_Str_BlockText = left(TabColor_Str , 200) '读取一段文本
+            TabColor_Str = mid(TabColor_Str , 201 , len(TabColor_Str))
+
+            ActiveWorkbook.Names.Add Name:= TabColor_Str_BlockName , RefersTo:="=""" & TabColor_Str_BlockText & """"
+
+            I = I + 1
+        Loop
     end if
 
     '保存Actviesheet 便于执行完毕后恢复
@@ -528,19 +547,47 @@ Sub Skewer_Range_Marker()
         end if
     next
 
-    
+    '读取 "Skewer_SheetColor"
+    For I = 0 To activeworkbook.names.count + 1
+        If I = 0 then
+            TabColor_Str_BlockName = "Skewer_SheetColor"
+        else
+            TabColor_Str_BlockName = "Skewer_SheetColor" & right("0000" & I ,3) '用Str(I)会多一个空格
+        End if
+
+        For J = 1 To activeworkbook.names.count
+            If activeworkbook.names(J).name = TabColor_Str_BlockName then exit for
+        Next
+        If J > activeworkbook.names.count then
+            I = I - 1   '找到最后一项了
+            Exit for
+        End If
+    Next
+    TabColor_Str = ""
+    For I = I to 0 Step -1
+        If I = 0 then
+            TabColor_Str_BlockName = "Skewer_SheetColor"
+        else
+            TabColor_Str_BlockName = "Skewer_SheetColor" & right("0000" & I ,3) '用Str(I)会多一个空格
+        End if
+
+        TabColor_Str = ActiveWorkbook.Names(TabColor_Str_BlockName).Value & TabColor_Str  '从后向前，倒序组合
+
+    Next
+
+
     if Remark_All_Sheets = False then  '部分重置模式还是要重置已选定的表的
         for I = 1 to ActiveWindow.SelectedSheets.Count
             With ActiveWindow.SelectedSheets(I)
-                for J = 1 to len(ActiveWorkbook.Names("Skewer_SheetColor").Value)
+                for J = 1 to len(TabColor_Str)
                     '把标签全都重置成原颜色的浅色版本
-                    TabColor_Str = mid(ActiveWorkbook.Names("Skewer_SheetColor").Value , J , len(.name) + 2 + 16)
-                    if left( TabColor_Str , len(.name) + 2) = "[" & .name & ":" then
-                        TabColor_Str = mid(TabColor_Str , len(.name) + 3 , 15)
-                        TabColor(1) = Val(mid(TabColor_Str , 1 , 3))
-                        TabColor(2) = Val(mid(TabColor_Str , 5 , 3))
-                        TabColor(3) = Val(mid(TabColor_Str , 9 , 3))
-                        TabColor(4) = Val(mid(TabColor_Str , 13 , 3))
+                    TabColor_Str_BlockText = mid(TabColor_Str , J , len(.name) + 2 + 16)
+                    if left( TabColor_Str_BlockText , len(.name) + 2) = "[" & .name & ":" then
+                        TabColor_Str_BlockText = mid(TabColor_Str_BlockText , len(.name) + 3 , 15)
+                        TabColor(1) = Val(mid(TabColor_Str_BlockText , 1 , 3))
+                        TabColor(2) = Val(mid(TabColor_Str_BlockText , 5 , 3))
+                        TabColor(3) = Val(mid(TabColor_Str_BlockText , 9 , 3))
+                        TabColor(4) = Val(mid(TabColor_Str_BlockText , 13 , 3))
                         .Tab.Color = RGB(TabColor(4) , TabColor(3) , TabColor(2))
                     end if
 
@@ -639,6 +686,8 @@ Sub Skewer_LoadRanges(optional control As IRibbonControl)
     Dim Checked_CutName as String
     Dim SkewerFinger_Row as Long
 
+    Dim Range_ToCheck as Range , Range_ToCheck_I as Range
+
     Dim X_CutName as String , X_Label as String , X_Sheet as String , X_Range as String
     Dim Opened_CutName as String   '保存已经打开的文件相对路径，如果不对就关闭
 
@@ -679,6 +728,73 @@ Sub Skewer_LoadRanges(optional control As IRibbonControl)
             end if
         end with
     next
+
+    '遍历检测导入范围内是否有隐藏单元格
+    for SkewerFinger_Row = 1 to SkewerFinger_MaxRow()
+        With Global_SkewerHeader.offset(SkewerFinger_Row,0)
+            X_CutName = .Cells(1).Text
+            X_Label = .Cells(2).Text
+            X_Sheet = .Cells(3).Text
+            X_Range = .Cells(4).Text
+            if X_Sheet <> "" and X_Range <> "" then  '先判断是不是空的
+                '检测是不是第一行
+                If X_CutName <> .Cells(1).offset(-1,0).Text or _ 
+                    X_Sheet <> .Cells(3).offset(-1,0).Text or _
+                    X_Range <> .Cells(4).offset(-1,0).Text then
+
+                    If Opened_CutName <> X_CutName then       '检测文件对不对，不对就把文件关了
+                        If Opened_CutName <> "" and X_Workbook <> "" then
+                            Workbooks(X_Workbook).Close
+                            X_Workbook = ""
+                            Opened_CutName = ""
+                        end if
+                    end if
+
+                    for J = 1 to workbooks.Count   '原来的检测代码，反正没坏处，万一计算出错了呢，反正是鲁棒性
+                        if right(workbooks(J).FullName , len(X_CutName)) = X_CutName then
+                            X_Workbook = workbooks(J).Name
+                            exit for
+                        end if
+                    next
+
+                    '检测文件是否已经打开，没有就打开
+                    if X_Workbook = "" then
+                        X_Workbook = application.workbooks.open(Filename:= Global_SkewerWorkbook.Path & X_CutName, ReadOnly:=False).Name  '打开文件 记录名字
+                        Opened_CutName = X_CutName
+
+                        Workbooks(X_Workbook).Saved = True  '标记成不用保存，保存很麻烦的~~~~~~~~~~~~~~~
+                    End If
+                    
+                    Set Range_ToCheck = Workbooks(X_Workbook).Worksheets(X_Sheet).Range(X_Range)
+                    
+                    '检测隐藏行
+                    For each Range_ToCheck_I in Range_ToCheck.Rows
+                        If Range_ToCheck_I.EntireRow.Hidden = True then
+                            Workbooks(X_Workbook).Worksheets(X_Sheet).Activate
+                            Msgbox("警告：发现选定范围内有隐藏行，程序终止，Row = " & Range_ToCheck_I.Address)
+                            Exit Sub
+                        End if
+                    Next
+
+                    '检测隐藏列
+                    For each Range_ToCheck_I in Range_ToCheck.Columns
+                        If Range_ToCheck_I.EntireColumn.Hidden = True then
+                            Workbooks(X_Workbook).Worksheets(X_Sheet).Activate
+                            Msgbox("警告：发现选定范围内有隐藏列，程序终止，Column = " & Range_ToCheck_I.Address)
+                            Exit Sub
+                        End if
+                    Next
+                End If
+            end if
+        end with
+    next
+    
+    If X_Workbook <> "" then Workbooks(X_Workbook).Close   '最后关闭
+    X_Workbook = ""
+    Opened_CutName = ""
+
+    Global_SkewerWorkbook.Activate  '恢复当前工作表
+
     'SkewerFinger_Row FingerLen 遍历
     for SkewerFinger_Row = SkewerFinger_MaxRow() to 1 step -1
         With Global_SkewerHeader.offset(SkewerFinger_Row,0)
