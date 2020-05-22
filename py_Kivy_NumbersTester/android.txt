@@ -1,0 +1,3 @@
+title=Kivy_Tester
+author=Z.K.yuan
+orientation=landscape
