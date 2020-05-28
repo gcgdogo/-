@@ -5,11 +5,11 @@ from __future__ import division, print_function, absolute_import, unicode_litera
 import my_config
 from kivy.app import App
 
-from Base_ScrMan import Base_ScrMan
+from Pattern_TestLayout import Pattern_TestLayout
 
 
 class MyApp(App):
     def build(self):
-        return Base_ScrMan()
+        return Pattern_TestLayout()
         
 MyApp().run()

@@ -26,6 +26,13 @@ class PatternButton(Button):
             ]
         }
 
+        self.Pattern_BackGround = "White"
+        self.Dict_BackGroundColor = {
+            "White" : [1,1,1] , 
+            "Red" : [1,0.5,0.5] ,
+            "Green" : [0.5,1,0.5]
+        }
+
         self.UpdatedSize = (0,0)
         self.UpdatePattern()
         self.bind(on_press = self.UpdatePattern)
@@ -53,7 +60,8 @@ class PatternButton(Button):
         self.canvas.clear()  #先清空再作图
         self.canvas.children = []
 
-        self.canvas.add(Color(1,1,1))  #白色背景
+        
+        self.canvas.add(Color(*self.Dict_BackGroundColor[self.Pattern_BackGround]))  #白色背景
         self.canvas.add(Rectangle(pos = [self.x + 2 , self.y + 2] , size = [self.width - 4,self.height - 4]))
 
         for Node_Data in self.PatternData['nodes']:
@@ -102,7 +110,7 @@ class PatternButton(Button):
 
         if self.Draw_Shape == 'circle' :
             #print('self.width ={} , self.height = {} , x = {} , y = {}'.format(self.width , self.height , x,y))
-            self.canvas.add(Ellipse(pos = [x , y] , size = [size,size] , group = 'Draw' ,color = Color(0.5,0.5,0.5)))
+            self.canvas.add(Ellipse(pos = [x , y] , size = [size,size] ,color = Color(0.5,0.5,0.5)))
 
     def CheckSize(self , *args):
         if self.UpdatedSize != (self.width,self.height):
@@ -128,6 +136,7 @@ class Pattern_ScreenManager(ScreenManager):
 
         def Edit_Pattern(self, PatternData):
             self.PatternButton.PatternData = PatternData
+            self.PatternButton.Pattern_BackGround = "White"
             self.PatternButton.UpdatePattern()
 
 
@@ -170,7 +179,8 @@ class Pattern_ScreenManager(ScreenManager):
     def Switch_If_Pressed(self , PatternData = {}):
         if self.is_pressed :
             self.Switch_Button(PatternData)
-            self.is_pressed = False
+            return True
+        return False
 
     def Switch_Button(self , PatternData = {} , Switch = True):
         if PatternData == {} : PatternData = self.default_PatternData
@@ -191,6 +201,19 @@ class Pattern_ScreenManager(ScreenManager):
             self.current = Current_New
         else:
             Pattern_Screen_Old.Edit_Pattern(PatternData)
+            
+        self.is_pressed = False
+    
+    def Get_Value(self):
+        return self.current_screen.PatternButton.PatternData['value']
+
+    def Get_PatternBackground(self):
+        return self.current_screen.PatternButton.Pattern_BackGround
+
+    def Set_PatternBackground(self , ColorName):
+        if ColorName in self.current_screen.PatternButton.Dict_BackGroundColor :
+            self.current_screen.PatternButton.Pattern_BackGround = ColorName
+            self.current_screen.PatternButton.UpdatePattern()
 
 
 
@@ -198,6 +221,7 @@ class Pattern_ScreenManager(ScreenManager):
 if __name__ =='__main__':
     from kivy.app import App
     from kivy.uix.boxlayout import BoxLayout
+    from random import randint
 
     import Pattern_Libary
 
@@ -216,7 +240,19 @@ if __name__ =='__main__':
             return layout
         
         def press(self):
+            RandCode = randint(0,2)
+            Choose_Right = False
             for I in range(len(self.list_PatternSM)):
-                self.list_PatternSM[I].Switch_If_Pressed(Pattern_Libary.Rand_Pattern(I+1))
+                if self.list_PatternSM[I].is_pressed :
+                    if I == RandCode :
+                        self.list_PatternSM[I].Set_PatternBackground('Green')
+                        Choose_Right = True
+                    else:
+                        self.list_PatternSM[I].Set_PatternBackground('Red')
+            if Choose_Right:
+                print('Choose Right:')
+                for I in range(len(self.list_PatternSM)):
+                    self.list_PatternSM[I].Switch_If_Pressed(Pattern_Libary.Rand_Pattern(I+1))
+                    print(self.list_PatternSM[I].Get_PatternBackground())
 
     MyApp().run()
