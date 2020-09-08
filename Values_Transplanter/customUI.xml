@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+    <customUI xmlns="http://schemas.microsoft.com/office/2006/01/customui" xmlns:ns_EX="EX_Shared_Ribbon">
+        <ribbon>
+            <tabs>
+                <tab idQ="ns_EX:Tab_EX">
+                    <group id="Group_Values_Transplanter" label="Values_Transplanter">
+                        <button id="BTN_Values_Load"
+                                label="读取数据"
+                                imageMso="ExportTextFile"
+                                size="large"
+                                onAction="Values_Load" />
+                        <button id="BTN_Values_Write"
+                                label="选定文件"
+                                imageMso="ImportTextFile"
+                                size="large"
+                                onAction="Values_Write" />
+                        
+                    </group>
+                </tab>
+            </tabs>
+        </ribbon>
+    </customUI>
